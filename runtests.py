@@ -17,6 +17,7 @@ try:
             "django.contrib.auth",
             "django.contrib.contenttypes",
             "django.contrib.sites",
+            "mptt",
             "djcat",
         ],
         SITE_ID=1,

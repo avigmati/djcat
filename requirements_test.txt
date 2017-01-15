@@ -6,3 +6,5 @@ tox>=1.7.0
 
 # Additional test requirements go here
 django
+django-mptt
+Unidecode
