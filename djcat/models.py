@@ -7,6 +7,7 @@ from django.utils.translation import ugettext as _
 from mptt.models import MPTTModel, TreeForeignKey
 
 from .utils import create_slug, unique_slug
+from .exceptions import CategoryInheritanceError
 
 
 class BaseCatalogItem:
@@ -156,6 +157,8 @@ class BaseCategory(MPTTModel, BaseCatalogItem):
             instance_before = self.__class__.objects.get(pk=self.pk) if self.id else None
             self.is_root = self.is_root_node()
             self.is_endpoint = True if self.item_class else False
+            if self.parent and self.parent.is_endpoint:
+                raise CategoryInheritanceError(invalid_category=self.parent)
             if self.is_endpoint and not self.is_unique_in_path:
                 self.is_unique_in_path = True
             self.create_slug(instance_before)
