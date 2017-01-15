@@ -55,7 +55,10 @@ setup(
         'djcat',
     ],
     include_package_data=True,
-    install_requires=[],
+    install_requires=[
+        'mptt',
+        'Unidecode'
+    ],
     license="BSD",
     zip_safe=False,
     keywords='djcat',
