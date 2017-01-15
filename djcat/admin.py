@@ -8,6 +8,8 @@ class CategoryForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(CategoryForm, self).__init__(*args, **kwargs)
 
+        self.fields['parent'].queryset = self.Meta.model.objects.filter(is_endpoint=False)
+
     class Meta:
         exclude = ['is_root', 'is_endpoint']
 
