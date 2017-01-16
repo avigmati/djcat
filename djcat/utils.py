@@ -1,7 +1,10 @@
+import importlib
 import random
 import string
 import itertools
 from unidecode import unidecode
+
+from django.conf import settings
 from django.utils.text import slugify
 
 
@@ -49,3 +52,13 @@ def unique_slug(model, slug, instance=None):
                 break
         slug = '%s-%d' % (orig, x)
     return slug
+
+
+def get_item_modules():
+    """
+    Return catalog items modules. Load from DJCAT_ITEM_MODULES defined in settings.
+    :return: Dictionary
+    """
+    return dict(map(lambda x: (importlib.import_module(x).NAME, importlib.import_module(x)),
+                    settings.DJCAT_ITEM_MODULES))
+

@@ -1,8 +1,11 @@
-import sys
+import os, sys
 
 try:
     from django.conf import settings
     from django.test.utils import get_runner
+
+    MODULES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tests')
+    sys.path.insert(0, MODULES_DIR)
 
     settings.configure(
         DEBUG=True,
@@ -13,15 +16,21 @@ try:
             }
         },
         ROOT_URLCONF="djcat.urls",
+
         INSTALLED_APPS=[
             "django.contrib.auth",
             "django.contrib.contenttypes",
             "django.contrib.sites",
             "mptt",
             "djcat",
+            "catalog_item_realty"
         ],
         SITE_ID=1,
         MIDDLEWARE_CLASSES=(),
+
+        DJCAT_ITEM_MODULES=[
+            'catalog_item_realty'
+        ]
     )
 
     try:

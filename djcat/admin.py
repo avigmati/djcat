@@ -3,6 +3,8 @@ from django.utils.html import format_html
 
 from mptt.admin import MPTTModelAdmin
 
+from . import ITEM_MODULES
+
 
 class CategoryForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
