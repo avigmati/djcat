@@ -1,7 +1,7 @@
-from djcat.models import BaseCategory
+from djcat.models import DjcatCategory
 
 
-class Category(BaseCategory):
+class Category(DjcatCategory):
 
     class Meta:
         app_label = 'djcat'

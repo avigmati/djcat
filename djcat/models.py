@@ -2,6 +2,8 @@ import abc
 import json
 
 from django.db import models
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 from django.utils.translation import ugettext as _
 
 from mptt.models import MPTTModel, TreeForeignKey
@@ -10,7 +12,7 @@ from .utils import create_slug, unique_slug
 from .exceptions import CategoryInheritanceError
 
 
-class BaseCatalogItem:
+class BaseDjcat:
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
@@ -94,7 +96,7 @@ class BaseCategoryManager(models.Manager):
         return paths
 
 
-class BaseCategory(MPTTModel, BaseCatalogItem):
+class DjcatCategory(MPTTModel, BaseDjcat):
     title = models.CharField(max_length=400, verbose_name=_('Title'))
     slug = models.SlugField(max_length=420, verbose_name='Slug', blank=True)
     parent = TreeForeignKey('self', null=True, blank=True, related_name=_('Children'), db_index=True,
@@ -162,9 +164,44 @@ class BaseCategory(MPTTModel, BaseCatalogItem):
             if self.is_endpoint and not self.is_unique_in_path:
                 self.is_unique_in_path = True
             self.create_slug(instance_before)
-            super(BaseCategory, self).save(*args, **kwargs)
+            super(DjcatCategory, self).save(*args, **kwargs)
             self.__class__.objects.update_tree(self, instance_before)
         else:
-            super(BaseCategory, self).save(*args, **kwargs)
+            super(DjcatCategory, self).save(*args, **kwargs)
 
 
+class DjcatItem(models.Model, BaseDjcat):
+    title = models.CharField(max_length=200, verbose_name=_('Title'))
+    slug = models.SlugField(max_length=200, verbose_name='Slug', blank=True)
+    active = models.BooleanField(verbose_name=_('Active'), default=False)
+
+    content_type = models.ForeignKey(ContentType)
+    object_id = models.PositiveIntegerField()
+    category = GenericForeignKey('content_type', 'object_id')
+
+    class Meta:
+
+        abstract = True
+        verbose_name = _('Item')
+        verbose_name_plural = _('Items')
+
+    def __str__(self):
+        return self.title
+
+    def __unicode__(self):
+        return self.title
+
+    def get_url(self):
+        return 'url'
+
+    def create_slug(self, instance_before):
+        """
+        Create and make unique slug.
+        If passed instance before save(), checks if new slug (in admin edit for example) unique and make unique if not.
+        :param instance_before: Category instance before save()
+        """
+        if not instance_before:
+            self.slug = unique_slug(self.__class__, create_slug(self.title))
+        else:
+            if not instance_before.slug == self.slug:
+                self.slug = unique_slug(self.__class__, self.slug, instance=self)
