@@ -10,7 +10,8 @@ from django.utils.translation import ugettext as _
 from mptt.models import MPTTModel, TreeForeignKey
 
 from .utils import create_slug, unique_slug
-from .exceptions import CategoryInheritanceError, ItemModuleNameNotDefined, ItemModuleNameDuplicate, ItemNameDuplicate
+from .exceptions import CategoryInheritanceError, ItemModuleNameNotDefined, ItemModuleNameDuplicate, ItemNameDuplicate, \
+    CategoryRootCheckError
 
 
 class BaseDjcat:
@@ -148,6 +149,27 @@ class DjcatCategory(MPTTModel, BaseDjcat):
             if not instance_before.slug == self.slug:
                 self.slug = unique_slug(self.__class__, self.slug, instance=self)
 
+    @classmethod
+    def check_root(cls, title, model, instance_before=None):
+        """
+        Check for root with same name not present
+        :return:
+        """
+        if instance_before:
+            find = model.objects.filter(title=title).exclude(pk=instance_before.pk).count()
+        else:
+            find = model.objects.filter(title=title).count()
+        if find:
+            raise CategoryRootCheckError(title=title)
+
+    def check_inheritance(self):
+        """
+        Check for parent category is not endpoint
+        :return:
+        """
+        if self.parent and self.parent.is_endpoint:
+            raise CategoryInheritanceError(invalid_category=self.parent)
+
     def save(self, *args, **kwargs):
         """
         Saves instance and update tree
@@ -158,13 +180,15 @@ class DjcatCategory(MPTTModel, BaseDjcat):
         update_process = kwargs.pop('update_process', False)
         if not update_process:
             instance_before = self.__class__.objects.get(pk=self.pk) if self.id else None
-            self.is_root = self.is_root_node()
+            if not self.parent:
+                self.__class__.check_root(self.title, self.__class__, instance_before=instance_before)
+                self.is_root = True
             self.is_endpoint = True if self.item_class else False
-            if self.parent and self.parent.is_endpoint:
-                raise CategoryInheritanceError(invalid_category=self.parent)
+            self.check_inheritance()
             if self.is_endpoint and not self.is_unique_in_path:
                 self.is_unique_in_path = True
             self.create_slug(instance_before)
+
             super(DjcatCategory, self).save(*args, **kwargs)
             self.__class__.objects.update_tree(self, instance_before)
         else:

@@ -23,14 +23,11 @@ try:
             "django.contrib.sites",
             "mptt",
             "djcat",
-            "catalog_item_realty"
+            # "catalog_item_realty"
         ],
         SITE_ID=1,
         MIDDLEWARE_CLASSES=(),
 
-        DJCAT_ITEM_MODULES=[
-            'catalog_item_realty'
-        ]
     )
 
     try:

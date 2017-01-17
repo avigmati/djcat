@@ -11,13 +11,15 @@ Tests for `djcat` models module.
 from django.test import TestCase
 
 from .models import Category
-from djcat.exceptions import CategoryInheritanceError
+from djcat.exceptions import CategoryInheritanceError, CategoryRootCheckError
 
 
 class CategoryCase(TestCase):
 
     def create_instance(self, **kwargs):
-        return Category.objects.create(**kwargs)
+        c = Category.objects.create(**kwargs)
+        c.refresh_from_db()
+        return c
 
     def test_creation(self):
         """Categories creation test"""
@@ -51,7 +53,7 @@ class CategoryCase(TestCase):
         """Categories slug creation test"""
         c = self.create_instance(title="привет")
         self.assertEqual(c.slug, 'privet')
-        c2 = self.create_instance(title="привет")
+        c2 = self.create_instance(title="привет2")
         self.assertNotEqual(c.slug, c2.slug)
 
     def test_is_unique_in_path(self):
@@ -62,33 +64,39 @@ class CategoryCase(TestCase):
     def test_paths(self):
         """Categories paths creation and update test"""
         c = self.create_instance(title="test")
-        c.refresh_from_db()
         self.assertEqual(c.get_url_paths(), {'full': ['test'], 'unique': []})
         c1 = self.create_instance(title="test1", parent=c, is_unique_in_path=True)
-        c1.refresh_from_db()
         self.assertEqual(c1.get_url_paths(), {'full': ['test', 'test1'], 'unique': ['test1']})
         c2 = self.create_instance(title="test2", parent=c1)
         c3 = self.create_instance(title="test3", parent=c2, item_class='test_item_class')
-        c3.refresh_from_db()
         self.assertEqual(c3.get_url_paths(),
                          {'full': ['test', 'test1', 'test2', 'test3'], 'unique': ['test1', 'test3']})
 
         # create new root and move c1 to this branch
         cn = self.create_instance(title="test_new")
-        cn.refresh_from_db()
         c1.parent = cn
         c1.save()
         c1.refresh_from_db()
-        self.assertEqual(c1.get_url_paths(), {'full': ['test_new', 'test1'], 'unique': ['test1']})
         c2.refresh_from_db()
-        self.assertEqual(c2.get_url_paths(), {'full': ['test_new', 'test1', 'test2'], 'unique': ['test1']})
         c3.refresh_from_db()
+        self.assertEqual(c1.get_url_paths(), {'full': ['test_new', 'test1'], 'unique': ['test1']})
+        self.assertEqual(c2.get_url_paths(), {'full': ['test_new', 'test1', 'test2'], 'unique': ['test1']})
         self.assertEqual(c3.get_url_paths(),
                          {'full': ['test_new', 'test1', 'test2', 'test3'], 'unique': ['test1', 'test3']})
 
     def test_endpoint_as_parent(self):
         c = self.create_instance(title='endpoint', item_class='itemc')
         self.assertRaises(CategoryInheritanceError, self.create_instance, title='fail', parent=c)
+
+    def test_root_with_same_name(self):
+        c = self.create_instance(title='root')
+        self.assertRaises(CategoryRootCheckError, self.create_instance, title='root')
+
+    def test_move_to_root(self):
+        c = self.create_instance(title='root')
+        c1 = self.create_instance(title="root", parent=c)
+        c1.parent = None
+        self.assertRaises(CategoryRootCheckError, c1.save)
 
 # class TestDjcat(TestCase):
 #

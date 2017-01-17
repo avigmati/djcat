@@ -5,6 +5,7 @@ from django.utils.html import conditional_escape
 from django.utils.translation import ugettext as _
 
 from djcat.models import CatalogItem
+from djcat.exceptions import CategoryRootCheckError
 
 
 class ItemClassWidget(forms.Select):
@@ -17,7 +18,8 @@ class ItemClassWidget(forms.Select):
         selected_html = (option_value in selected_choices) and 'selected="selected"' or ''
         disabled_html = (option_value in self.classes_in_use) and 'disabled' or ''
         if option_value in selected_choices:
-            option_label = '{} {}'.format(option_label, _('(selected)'))
+            if not option_value == '':
+                option_label = '{} {}'.format(option_label, _('(selected)'))
         else:
             option_label = (option_value in self.classes_in_use) and '{} {}'.format(option_label, _('(in use)')) \
                            or option_label
@@ -47,11 +49,20 @@ class CategoryForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(CategoryForm, self).__init__(*args, **kwargs)
         self.fields['parent'].queryset = self.Meta.model.objects.filter(is_endpoint=False)
-        self.fields['item_class'] = ItemClassField(model=self.Meta.model)
+        self.fields['item_class'] = ItemClassField(required=False, model=self.Meta.model)
 
     class Meta:
         exclude = ['is_root', 'is_endpoint']
 
     def clean(self):
         cleaned_data = super(CategoryForm, self).clean()
+
+        if not cleaned_data['parent']:
+            try:
+                self.Meta.model.check_root(cleaned_data['title'], self.Meta.model)
+            except CategoryRootCheckError as e:
+                self.add_error('title', '')
+                self.add_error('parent', '')
+                raise forms.ValidationError(e)
+
         return cleaned_data
