@@ -10,7 +10,7 @@ from django.utils.translation import ugettext as _
 from mptt.models import MPTTModel, TreeForeignKey
 
 from .utils import create_slug, unique_slug
-from .exceptions import CategoryInheritanceError, ItemModuleNameNotDefined
+from .exceptions import CategoryInheritanceError, ItemModuleNameNotDefined, ItemModuleNameDuplicate, ItemNameDuplicate
 
 
 class BaseDjcat:
@@ -207,7 +207,7 @@ class DjcatItem(models.Model, BaseDjcat):
 
 class CatalogItem:
     """
-    Decorator class, register all catalog modules and his item classes in REGISTRY
+    Decorator class, register all catalog modules and his item classes and store in REGISTRY
     """
 
     REGISTRY = {}
@@ -216,20 +216,42 @@ class CatalogItem:
         self.name = name
 
     def __call__(self, cls):
-        self.item_register(cls)
+        self.register(cls)
         return cls
 
-    def item_register(self, cls):
+    def register(self, cls):
         """
-        Decorator register item modules and its item classes.
+        Register item modules and its item classes.
         :param cls: Class object
         :return: Class object
         """
-        name = self.get_module_name(cls)
+        module_name, module = self.register_module(cls)
+        self.__class__.REGISTRY[module_name] = self.register_item(module, cls)
+
+    def register_item(self, module, cls):
+        """
+        Populate module items with given class
+        :param module: Dictionary. Module data
+        :param cls: Class object
+        :return: Dictionary. Module data
+        """
+        item_props = self.get_item_class_props(module, cls)
+        class_name = item_props.pop('class_name')
+        module['items'].update({class_name: item_props})
+        return module
+
+    def register_module(self, cls):
+        """
+        Populate REGISTRY with module of given class
+        :param cls: Class object
+        :return: name: String - module name, module: Dictionary, module data
+        """
+        name, human_name = self.get_module_name(cls)
         if self.__class__.REGISTRY.get(name):
-            self.__class__.REGISTRY[self.get_module_name(cls)].append(self.get_item_class_props(cls))
+            module = self.__class__.REGISTRY[name]
         else:
-            self.__class__.REGISTRY[self.get_module_name(cls)] = [self.get_item_class_props(cls)]
+            module = {'module': cls.__module__, 'human_name': human_name, 'items': {}}
+        return name, module
 
     def get_module_name(self, cls):
         """
@@ -238,7 +260,9 @@ class CatalogItem:
         :return: String
         """
         try:
-            name = cls.__module__.ITEM_MODULE_NAME
+            m = importlib.import_module(cls.__module__)
+            name = m.ITEM_MODULE_NAME
+            human_name = getattr(m, 'ITEM_MODULE_HUMAN_NAME', name)
         except AttributeError:
             mnames = cls.__module__.split('.')
             if len(mnames) > 1:
@@ -247,14 +271,28 @@ class CatalogItem:
                     name = root_module.ITEM_MODULE_NAME
                 except AttributeError:
                     raise ItemModuleNameNotDefined(cls, root_module)
+                else:
+                    human_name = getattr(root_module, 'ITEM_MODULE_HUMAN_NAME', name)
             else:
                 raise ItemModuleNameNotDefined(cls, mnames[0])
-        return name
 
-    def get_item_class_props(self, cls):
+        # check duplicates
+        for mname, mprops in self.__class__.REGISTRY.items():
+            if not cls.__module__ == mprops['module']:
+                if mname == name:
+                    raise ItemModuleNameDuplicate(cls.__module__, name, mprops['module'])
+                if mprops['human_name'] == human_name:
+                    raise ItemModuleNameDuplicate(cls.__module__, human_name, mprops['module'])
+
+        return name, human_name
+
+    def get_item_class_props(self, module, cls):
         """
         Return given class properties
         :param cls: Class object
         :return: Dictionary
         """
-        return {'name': self.name, 'class_name': cls.__name__, 'class': cls}
+        # check duplicates
+        if self.name in [x[1]['name'] for x in module['items'].items()]:
+            raise ItemNameDuplicate(self.name, module['module'])
+        return {'name': self.name, 'class_name': cls.__name__, 'class': '{}.{}'.format(module['module'], cls.__name__)}

@@ -1,27 +1,53 @@
 from django import forms
+from django.utils.html import escape
+from django.utils.encoding import force_text
+from django.utils.html import conditional_escape
+from django.utils.translation import ugettext as _
 
 from djcat.models import CatalogItem
 
 
+class ItemClassWidget(forms.Select):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.classes_in_use = []
+
+    def render_option(self, selected_choices, option_value, option_label):
+        option_value = force_text(option_value)
+        selected_html = (option_value in selected_choices) and 'selected="selected"' or ''
+        disabled_html = (option_value in self.classes_in_use) and 'disabled' or ''
+        if option_value in selected_choices:
+            option_label = '{} {}'.format(option_label, _('(selected)'))
+        else:
+            option_label = (option_value in self.classes_in_use) and '{} {}'.format(option_label, _('(in use)')) \
+                           or option_label
+        return '<option value="{}" {} {}>{}</option>'.format(escape(option_value), disabled_html, selected_html,
+                                                             conditional_escape(force_text(option_label)))
+
 
 class ItemClassField(forms.ChoiceField):
+
+    widget = ItemClassWidget
+
     def __init__(self, choices=(), *args, **kwargs):
-        choices = [(k, k) for k in CatalogItem.REGISTRY.keys()]
-        # choice_pairs = [(c[0], c[1]) for c in choices]
-        super().__init__(choices=choices, *args, **kwargs)
-        # self.widget.uniques = dict([(c[1], c[2]) for c in choices])
-    # def clean(self, value):
-    #     try:
-    #         return value
-    #     except:
-    #         raise ValidationError
+        self.model = kwargs.pop('model')
+        super().__init__(choices=self.get_choices(), *args, **kwargs)
+        self.widget.classes_in_use = [x.item_class for x in self.model.objects.filter(is_active=True)]
+
+    def get_choices(self):
+        choices = [('', '')]
+        for module, mdict in CatalogItem.REGISTRY.items():
+            items = [(x[1]['class'], x[1]['name']) for x in mdict['items'].items()]
+            items = sorted(items, key=lambda x: x[1])
+            choices.append((mdict['human_name'], tuple(items)))
+        return sorted(choices, key=lambda x: x[0])
 
 
 class CategoryForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(CategoryForm, self).__init__(*args, **kwargs)
         self.fields['parent'].queryset = self.Meta.model.objects.filter(is_endpoint=False)
-        self.fields['item_class'] = ItemClassField()
+        self.fields['item_class'] = ItemClassField(model=self.Meta.model)
 
     class Meta:
         exclude = ['is_root', 'is_endpoint']
