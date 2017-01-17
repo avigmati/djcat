@@ -1,4 +1,5 @@
 import abc
+import importlib
 import json
 
 from django.db import models
@@ -9,7 +10,7 @@ from django.utils.translation import ugettext as _
 from mptt.models import MPTTModel, TreeForeignKey
 
 from .utils import create_slug, unique_slug
-from .exceptions import CategoryInheritanceError
+from .exceptions import CategoryInheritanceError, ItemModuleNameNotDefined
 
 
 class BaseDjcat:
@@ -180,10 +181,7 @@ class DjcatItem(models.Model, BaseDjcat):
     category = GenericForeignKey('content_type', 'object_id')
 
     class Meta:
-
         abstract = True
-        verbose_name = _('Item')
-        verbose_name_plural = _('Items')
 
     def __str__(self):
         return self.title
@@ -205,3 +203,58 @@ class DjcatItem(models.Model, BaseDjcat):
         else:
             if not instance_before.slug == self.slug:
                 self.slug = unique_slug(self.__class__, self.slug, instance=self)
+
+
+class CatalogItem:
+    """
+    Decorator class, register all catalog modules and his item classes in REGISTRY
+    """
+
+    REGISTRY = {}
+
+    def __init__(self, name):
+        self.name = name
+
+    def __call__(self, cls):
+        self.item_register(cls)
+        return cls
+
+    def item_register(self, cls):
+        """
+        Decorator register item modules and its item classes.
+        :param cls: Class object
+        :return: Class object
+        """
+        name = self.get_module_name(cls)
+        if self.__class__.REGISTRY.get(name):
+            self.__class__.REGISTRY[self.get_module_name(cls)].append(self.get_item_class_props(cls))
+        else:
+            self.__class__.REGISTRY[self.get_module_name(cls)] = [self.get_item_class_props(cls)]
+
+    def get_module_name(self, cls):
+        """
+        Return given class item module name (ITEM_MODULE_NAME)
+        :param cls: Class object
+        :return: String
+        """
+        try:
+            name = cls.__module__.ITEM_MODULE_NAME
+        except AttributeError:
+            mnames = cls.__module__.split('.')
+            if len(mnames) > 1:
+                root_module = importlib.import_module(mnames[0])
+                try:
+                    name = root_module.ITEM_MODULE_NAME
+                except AttributeError:
+                    raise ItemModuleNameNotDefined(cls, root_module)
+            else:
+                raise ItemModuleNameNotDefined(cls, mnames[0])
+        return name
+
+    def get_item_class_props(self, cls):
+        """
+        Return given class properties
+        :param cls: Class object
+        :return: Dictionary
+        """
+        return {'name': self.name, 'class_name': cls.__name__, 'class': cls}
