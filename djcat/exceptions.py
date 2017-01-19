@@ -63,3 +63,28 @@ class ItemNameDuplicate(Exception):
 
     def __str__(self):
         return _(self.error).format(self.item_name, self.item_module)
+
+
+class ItemAttributeKeyNotPresent(Exception):
+    def __init__(self, attr_class):
+        self.attr_class = attr_class
+        self.error = "Attribute class '{}' has no key"
+
+    def __repr__(self):
+        return self.error.format(self.attr_class)
+
+    def __str__(self):
+        return _(self.error).format(self.attr_class)
+
+
+class ItemAttributeKeyDuplicate(Exception):
+    def __init__(self, attr_class, attr_key):
+        self.attr_class = attr_class
+        self.attr_key = attr_key
+        self.error = "Attribute key '{}' duplicate in class '{}'"
+
+    def __repr__(self):
+        return self.error.format(self.attr_key, self.attr_class)
+
+    def __str__(self):
+        return _(self.error).format(self.attr_key, self.attr_class)

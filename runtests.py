@@ -1,10 +1,15 @@
+#!/usr/bin/env python
+
 import os, sys
+from django.core.management import call_command
+
 
 try:
     from django.conf import settings
     from django.test.utils import get_runner
 
-    MODULES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tests')
+    BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tests')
+    MODULES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tests', 'item_modules')
     sys.path.insert(0, MODULES_DIR)
 
     settings.configure(
@@ -12,6 +17,7 @@ try:
         USE_TZ=True,
         DATABASES={
             "default": {
+                'NAME': os.path.join(BASE_DIR, 'test_db.sqlite3'),
                 "ENGINE": "django.db.backends.sqlite3",
             }
         },
@@ -23,7 +29,7 @@ try:
             "django.contrib.sites",
             "mptt",
             "djcat",
-            # "catalog_item_realty"
+            "module_a"
         ],
         SITE_ID=1,
         MIDDLEWARE_CLASSES=(),
@@ -37,6 +43,9 @@ try:
         pass
     else:
         setup()
+        call_command('migrate')
+        call_command('makemigrations', 'module_a')
+        call_command('migrate')
 
 except ImportError:
     import traceback

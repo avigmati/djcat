@@ -11,7 +11,7 @@ from mptt.models import MPTTModel, TreeForeignKey
 
 from .utils import create_slug, unique_slug
 from .exceptions import CategoryInheritanceError, ItemModuleNameNotDefined, ItemModuleNameDuplicate, ItemNameDuplicate, \
-    CategoryRootCheckError
+    CategoryRootCheckError, ItemAttributeKeyNotPresent, ItemAttributeKeyDuplicate
 
 
 class BaseDjcat:
@@ -237,7 +237,7 @@ class CatalogItem:
     REGISTRY = {}
 
     def __init__(self, name):
-        self.name = name
+        self.verbose_name = name
 
     def __call__(self, cls):
         self.register(cls)
@@ -251,6 +251,7 @@ class CatalogItem:
         """
         module_name, module = self.register_module(cls)
         self.__class__.REGISTRY[module_name] = self.register_item(module, cls)
+        self.check_attr_values()
 
     def register_item(self, module, cls):
         """
@@ -270,11 +271,11 @@ class CatalogItem:
         :param cls: Class object
         :return: name: String - module name, module: Dictionary, module data
         """
-        name, human_name = self.get_module_name(cls)
+        name, verbose_name = self.get_module_name(cls)
         if self.__class__.REGISTRY.get(name):
             module = self.__class__.REGISTRY[name]
         else:
-            module = {'module': cls.__module__, 'human_name': human_name, 'items': {}}
+            module = {'module': cls.__module__, 'verbose_name': verbose_name, 'items': {}}
         return name, module
 
     def get_module_name(self, cls):
@@ -286,7 +287,7 @@ class CatalogItem:
         try:
             m = importlib.import_module(cls.__module__)
             name = m.ITEM_MODULE_NAME
-            human_name = getattr(m, 'ITEM_MODULE_HUMAN_NAME', name)
+            verbose_name = getattr(m, 'ITEM_MODULE_VERBOSE_NAME', name)
         except AttributeError:
             mnames = cls.__module__.split('.')
             if len(mnames) > 1:
@@ -296,7 +297,7 @@ class CatalogItem:
                 except AttributeError:
                     raise ItemModuleNameNotDefined(cls, root_module)
                 else:
-                    human_name = getattr(root_module, 'ITEM_MODULE_HUMAN_NAME', name)
+                    verbose_name = getattr(root_module, 'ITEM_MODULE_VERBOSE_NAME', name)
             else:
                 raise ItemModuleNameNotDefined(cls, mnames[0])
 
@@ -305,10 +306,10 @@ class CatalogItem:
             if not cls.__module__ == mprops['module']:
                 if mname == name:
                     raise ItemModuleNameDuplicate(cls.__module__, name, mprops['module'])
-                if mprops['human_name'] == human_name:
-                    raise ItemModuleNameDuplicate(cls.__module__, human_name, mprops['module'])
+                if mprops['verbose_name'] == verbose_name:
+                    raise ItemModuleNameDuplicate(cls.__module__, verbose_name, mprops['module'])
 
-        return name, human_name
+        return name, verbose_name
 
     def get_item_class_props(self, module, cls):
         """
@@ -317,6 +318,38 @@ class CatalogItem:
         :return: Dictionary
         """
         # check duplicates
-        if self.name in [x[1]['name'] for x in module['items'].items()]:
-            raise ItemNameDuplicate(self.name, module['module'])
-        return {'name': self.name, 'class_name': cls.__name__, 'class': '{}.{}'.format(module['module'], cls.__name__)}
+        if self.verbose_name in [x[1]['verbose_name'] for x in module['items'].items()]:
+            raise ItemNameDuplicate(self.verbose_name, module['module'])
+        return {'verbose_name': self.verbose_name, 'class_name': cls.__name__, 'class': '{}.{}'.format(module['module'], cls.__name__),
+                'attributes': self.get_class_attributes(cls)}
+
+    def get_class_attributes(self, cls):
+        """
+        Return given class attributes
+        :param cls: Class object
+        :return: Dictionary
+        """
+        attrs = {}
+        for f in cls._meta.fields:
+            if getattr(f, 'DJCAT_ATTRIBUTE_NAME', None):
+                attrs[f.DJCAT_ATTRIBUTE_NAME] = {'verbose_name': f.DJCAT_ATTRIBUTE_VERBOSE_NAME,
+                                                 'key': f.DJCAT_ATTRIBUTE_KEY,
+                                                 'class': '{}.{}'.format(f.DJCAT_ATTRIBUTE_CLASS.__module__,
+                                                                         f.DJCAT_ATTRIBUTE_CLASS.__name__)}
+        return attrs
+
+    def check_attr_values(self):
+        """
+        Validate items attributes values
+        :return:
+        """
+        akeys = []
+        for m in self.__class__.REGISTRY.items():
+            for i in m[1]['items'].items():
+                for a in i[1]['attributes'].items():
+                    if not a[1].get('key', None):
+                        raise ItemAttributeKeyNotPresent(a[1]['class'])
+                    if not a[1]['key'] in akeys:
+                        akeys.append(a[1]['key'])
+                    else:
+                        raise ItemAttributeKeyDuplicate(a[1]['class'], a[1]['key'])
