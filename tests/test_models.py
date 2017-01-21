@@ -10,7 +10,7 @@ Tests for `djcat` models module.
 
 from django.test import TestCase
 
-from .models import Category
+from catalog.models import Category
 from djcat.exceptions import CategoryInheritanceError, CategoryRootCheckError
 
 

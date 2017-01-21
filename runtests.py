@@ -9,8 +9,7 @@ try:
     from django.test.utils import get_runner
 
     BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tests')
-    MODULES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tests', 'item_modules')
-    sys.path.insert(0, MODULES_DIR)
+    sys.path.insert(0, BASE_DIR)
 
     settings.configure(
         DEBUG=True,
@@ -29,11 +28,14 @@ try:
             "django.contrib.sites",
             "mptt",
             "djcat",
-            "module_a"
+            "catalog",
+            "catalog_module_realty"
         ],
         SITE_ID=1,
         MIDDLEWARE_CLASSES=(),
 
+        DJCAT_ATTR_TYPES=['simply', 'choice'],
+        DJCAT_CATEGORY_MODEL='catalog.models.category'
     )
 
     try:
@@ -44,8 +46,10 @@ try:
     else:
         setup()
         call_command('migrate')
-        call_command('makemigrations', 'module_a')
-        call_command('migrate')
+        call_command('makemigrations', 'catalog')
+        call_command('makemigrations', 'catalog_module_realty')
+        call_command('migrate', 'catalog')
+        call_command('migrate', 'catalog_module_realty')
 
 except ImportError:
     import traceback

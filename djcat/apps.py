@@ -10,9 +10,8 @@ class DjcatConfig(AppConfig):
         if settings.DEBUG:
             from pprint import pprint
             from .__init__ import __version__
-            from .models import CatalogItem
+            from .register import CatalogItem
             print()
             print('Djcat {} loaded with structure:'.format(__version__))
             pprint(CatalogItem.REGISTRY)
             print()
-
