@@ -157,7 +157,7 @@ class ItemAttributeChoicesSlugsDuplicateInCatalogItem(Exception):
 
 class ChoiceAttribute(BaseAttribute):
     """
-    Attribute with choices. Choices \must be declared in subclass and must contain slugs as third element, example:
+    Attribute with choices. Choices must be declared in subclass and must contain slugs as third element, example:
         @catalog_attribute(name='building_type', verbose_name='Тип строения', key='rbt')
         class BuildingTypeAttribute(ChoiceAttribute):
             attr_choices = (
@@ -169,6 +169,7 @@ class ChoiceAttribute(BaseAttribute):
             )
     """
     attr_type = 'choice'
+    attr_choices = None
 
     @classmethod
     def get_choices_for_model_field(cls):

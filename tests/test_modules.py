@@ -14,8 +14,8 @@ from djcat.register import CatalogItem
 from djcat.exceptions import *
 
 
-class ModulesCase(TestCase):
-    """Modules load test"""
+class TestModulesCase(TestCase):
+    """Modules test"""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -81,3 +81,8 @@ class ModulesCase(TestCase):
         self.assertTrue(attr.get('key'), 'rbt')
         self.assertTrue(attr.get('type'), 'choice')
         self.assertTrue(len(attr.get('choices')), 5)
+
+    def test_get_item_by_class(self):
+        item = CatalogItem.get_item_by_class('catalog_module_realty.models.FlatBuy')
+        self.assertEqual(item.name, 'FlatBuy')
+

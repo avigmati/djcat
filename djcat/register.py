@@ -1,15 +1,16 @@
 import importlib
+from collections import namedtuple
 
 from .exceptions import *
 
 
-# def load_catalog():
-#     return CatalogItem.REGISTRY
+Item = namedtuple('Item', ['name', 'klass', 'class_obj', 'verbose_name', 'attrs'])
+ItemAttribute = namedtuple('ItemAttribute', ['name', 'klass', 'class_obj', 'verbose_name', 'type', 'key', 'choices'])
 
 
 class CatalogItem:
     """
-    Decorator class, register all catalog modules and his item classes and store in REGISTRY
+    Decorator class, collect all catalog modules and his item classes in cls.REGISTRY
     """
 
     REGISTRY = {}
@@ -30,7 +31,6 @@ class CatalogItem:
         module_name, module = self.register_module(cls)
         self.__class__.REGISTRY[module_name] = self.register_item(module, cls)
         self.load_items_attributes()
-
 
     def register_module(self, cls):
         """
@@ -78,7 +78,6 @@ class CatalogItem:
 
         return name, verbose_name, module
 
-
     def register_item(self, module, cls):
         """
         Populate module items with given class
@@ -90,8 +89,6 @@ class CatalogItem:
         class_name = item_props.pop('class_name')
         module['items'].update({class_name: item_props})
         return module
-
-
 
     def get_item_class_props(self, module, cls):
         """
@@ -122,28 +119,38 @@ class CatalogItem:
                         if not a.attr_verbose_name:
                             raise ItemAttributeVerboseNameNotPresent(a.__class__)
                         i[1]['attrs'].update({
-                            f.get_name(): a.get_values_for_registry(self.__class__.REGISTRY)
+                            a.get_name(): a.get_values_for_registry(self.__class__.REGISTRY)
                         })
 
+    @classmethod
+    def get_item_by_class(cls, klass):
+        """
+        Return item by 'class' attr
+        :param klass: String - item class path
+        :return: Item
+        """
+        for m in cls.REGISTRY.items():
+            for i in m[1]['items'].items():
+                if i[1].get('class') == klass:
+                    item = Item(name=i[0], klass=klass, class_obj=i[1]['_class'], verbose_name=i[1]['verbose_name'],
+                                attrs=cls.get_item_attrs(i[1]['attrs']))
+                    return item
+        return None
 
-    # def get_items_attributes(self):
-    #     for m in self.__class__.REGISTRY.items():
-    #         for i in m[1]['items'].items():
-    #             for f in i[1]['_class']._meta.fields:
-    #                 if getattr(f, '_attr_class', None):
-    #                     a = f._attr_class()
-    #                     i[1]['attrs'].update({
-    #                         f.get_name(): a.get_values_for_registry(self.__class__.REGISTRY)
-    #                     })
-    #
-    # def get_attr(self, attr_class):
-    #     attr = attr_class
-    #     attr.validate(self.__class__.REGISTRY)
-    #     return {
-    #         'type': attr.get_type(),
-    #         'verbose_name': attr.get_verbose_name(),
-    #         'key': attr.get_key(),
-    #         'class': attr.get_class(),
-    #         '_class': attr_class
-    #     }
+
+    @classmethod
+    def get_item_attrs(cls, registry_dict):
+        """
+        Reeturn list of item attributes
+        :param registry_dict: Dict - item attrs from REGISTRY
+        :return: list
+        """
+        attrs = []
+        for a in registry_dict.items():
+            attrs.append(ItemAttribute(name=a[0], klass=a[1]['class'], class_obj=a[1]['_class'],
+                                       verbose_name=a[1]['verbose_name'], type=a[1]['type'], key=a[1]['key'],
+                                       choices=a[1]['choices'] if a[1].get('choices') else None))
+        return attrs
+
+
 

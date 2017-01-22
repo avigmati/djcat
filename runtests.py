@@ -35,7 +35,7 @@ try:
         MIDDLEWARE_CLASSES=(),
 
         DJCAT_ATTR_TYPES=['simply', 'choice'],
-        DJCAT_CATEGORY_MODEL='catalog.models.category'
+        DJCAT_CATEGORY_MODEL='catalog.Category'
     )
 
     try:

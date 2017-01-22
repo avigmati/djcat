@@ -126,3 +126,27 @@ class ItemAttributeVerboseNameNotPresent(Exception):
 
     def __str__(self):
         return self.error.format(self.attr_class)
+
+
+class PathNotValid(Exception):
+    def __init__(self, path):
+        self.path = path
+        self.error = "Path '{}' not valid"
+
+    def __repr__(self):
+        return self.error.format(self.path)
+
+    def __str__(self):
+        return self.error.format(self.path)
+
+
+class PathNotFound(Exception):
+    def __init__(self, path):
+        self.path = path
+        self.error = "Path '{}' not found"
+
+    def __repr__(self):
+        return self.error.format(self.path)
+
+    def __str__(self):
+        return self.error.format(self.path)

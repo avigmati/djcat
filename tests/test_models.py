@@ -14,7 +14,7 @@ from catalog.models import Category
 from djcat.exceptions import CategoryInheritanceError, CategoryRootCheckError
 
 
-class CategoryCase(TestCase):
+class TestCategoryCase(TestCase):
 
     def create_instance(self, **kwargs):
         c = Category.objects.create(**kwargs)
