@@ -14,4 +14,5 @@ class DjcatConfig(AppConfig):
             print()
             print('Djcat {} loaded with structure:'.format(__version__))
             pprint(CatalogItem.REGISTRY)
-            print()
+            print('load attributes...')
+            CatalogItem.load_items_attributes()

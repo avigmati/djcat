@@ -30,7 +30,7 @@ class CatalogItem:
         """
         module_name, module = self.register_module(cls)
         self.__class__.REGISTRY[module_name] = self.register_item(module, cls)
-        self.load_items_attributes()
+        # self.load_items_attributes()
 
     def register_module(self, cls):
         """
@@ -102,12 +102,13 @@ class CatalogItem:
         return {'verbose_name': self.verbose_name, 'class_name': cls.__name__,
                 'class': '{}.{}'.format(module['module'], cls.__name__), '_class': cls, 'attrs': {}}
 
-    def load_items_attributes(self):
+    @classmethod
+    def load_items_attributes(cls):
         """
         Load attributes of catalog items
         :return:
         """
-        for m in self.__class__.REGISTRY.items():
+        for m in cls.REGISTRY.items():
             for i in m[1]['items'].items():
                 for f in i[1]['_class']._meta.fields:
                     if getattr(f, '_is_djcat_attr', False):
@@ -119,7 +120,7 @@ class CatalogItem:
                         if not a.attr_verbose_name:
                             raise ItemAttributeVerboseNameNotPresent(a.__class__)
                         i[1]['attrs'].update({
-                            a.get_name(): a.get_values_for_registry(self.__class__.REGISTRY)
+                            a.get_name(): a.get_values_for_registry(cls.REGISTRY)
                         })
 
     @classmethod
@@ -136,7 +137,6 @@ class CatalogItem:
                                 attrs=cls.get_item_attrs(i[1]['attrs']))
                     return item
         return None
-
 
     @classmethod
     def get_item_attrs(cls, registry_dict):

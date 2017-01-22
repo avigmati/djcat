@@ -1,7 +1,9 @@
+from django.apps import apps
 from django.conf import settings
 
 
 from djcat.exceptions import *
+from djcat.register import CatalogItem
 
 
 def catalog_attribute(name=None, key=None, verbose_name=None):
@@ -130,31 +132,6 @@ class SimplyAttribute(BaseAttribute):
     attr_type = 'simply'
 
 
-class ItemAttributeChoicesSlugsDuplicate(Exception):
-    def __init__(self, attr_class):
-        self.attr_class = attr_class
-        self.error = "Attribute class '{}' duplicate choices slugs"
-
-    def __repr__(self):
-        return self.error.format(self.attr_class)
-
-    def __str__(self):
-        return self.error.format(self.attr_class)
-
-
-class ItemAttributeChoicesSlugsDuplicateInCatalogItem(Exception):
-    def __init__(self, attr_class, another_attr_class):
-        self.attr_class = attr_class
-        self.another_attr_class = another_attr_class
-        self.error = "Attribute class '{}' have choices that duplicates choices in class '{}'"
-
-    def __repr__(self):
-        return self.error.format(self.attr_class, self.another_attr_class)
-
-    def __str__(self):
-        return self.error.format(self.attr_class, self.another_attr_class)
-
-
 class ChoiceAttribute(BaseAttribute):
     """
     Attribute with choices. Choices must be declared in subclass and must contain slugs as third element, example:
@@ -170,6 +147,10 @@ class ChoiceAttribute(BaseAttribute):
     """
     attr_type = 'choice'
     attr_choices = None
+
+    def __init__(self):
+        super().__init__()
+        self.CategoryModel = apps.get_model(settings.DJCAT_CATEGORY_MODEL)
 
     @classmethod
     def get_choices_for_model_field(cls):
@@ -187,11 +168,12 @@ class ChoiceAttribute(BaseAttribute):
         return [c[-1] for c in self.__class__.attr_choices]
 
     def get_values_for_registry(self, registry):
-        # TODO: add validation choices for categories slugs
         values = super().get_values_for_registry(registry)
         slugs = self.get_choices_slugs()
         self.check_self_choices_slugs(slugs)
         self.check_catalog_item_choices_slugs(slugs, registry)
+        self.check_categories_slugs(slugs)
+        self.check_items_slugs(slugs, registry)
         values.update({'choices': slugs})
         return values
 
@@ -217,3 +199,27 @@ class ChoiceAttribute(BaseAttribute):
                     choices = a[1].get('choices')
                     if len(set(slugs) & set(choices)):
                         raise ItemAttributeChoicesSlugsDuplicateInCatalogItem(self, a[1].get('_class'))
+
+    def check_categories_slugs(self, slugs):
+        """
+        Check for slug duplicates with categories slugs
+        :param slugs: List - slugs
+        :return:
+        """
+        for node in self.CategoryModel.objects.all():
+            if node.slug in slugs:
+                raise ItemAttributeChoicesSlugsDuplicateWithcCategory(self, node)
+
+    def check_items_slugs(self, slugs, registry):
+        """
+        Check for slug duplicates with all item instances slugs
+        :param slugs: List - slugs
+        :param registry: Dictionary - CatalogItem.REGISTRY
+        :return:
+        """
+        for m in registry.items():
+            for i in m[1]['items'].items():
+                for slug in slugs:
+                    found = list(i[1]['_class'].objects.filter(slug=slug))
+                    if len(found):
+                        raise ItemAttributeChoicesSlugsDuplicateItemInstanceSlug(self, found[0])

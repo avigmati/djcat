@@ -5,7 +5,7 @@
 test_djcat
 ------------
 
-Tests for `djcat` catalog modules module.
+Tests for `djcat` catalog path.
 """
 
 from django.test import TestCase

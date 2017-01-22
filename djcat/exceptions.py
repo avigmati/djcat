@@ -150,3 +150,55 @@ class PathNotFound(Exception):
 
     def __str__(self):
         return self.error.format(self.path)
+
+
+class ItemAttributeChoicesSlugsDuplicate(Exception):
+    def __init__(self, attr_class):
+        self.attr_class = attr_class
+        self.error = "Attribute class '{}' duplicate choices slugs"
+
+    def __repr__(self):
+        return self.error.format(self.attr_class)
+
+    def __str__(self):
+        return self.error.format(self.attr_class)
+
+
+class ItemAttributeChoicesSlugsDuplicateInCatalogItem(Exception):
+    def __init__(self, attr_class, another_attr_class):
+        self.attr_class = attr_class
+        self.another_attr_class = another_attr_class
+        self.error = "Attribute class '{}' have choices that duplicates choices in class '{}'"
+
+    def __repr__(self):
+        return self.error.format(self.attr_class, self.another_attr_class)
+
+    def __str__(self):
+        return self.error.format(self.attr_class, self.another_attr_class)
+
+
+class ItemAttributeChoicesSlugsDuplicateWithcCategory(Exception):
+    def __init__(self, attr_class, category):
+        self.attr_class = attr_class
+        self.category = category
+        self.error = "Attribute class '{}' have choices that clashes with category instance slug, " \
+                     "category instance: '{}'"
+
+    def __repr__(self):
+        return self.error.format(self.attr_class, self.category)
+
+    def __str__(self):
+        return self.error.format(self.attr_class, self.category)
+
+
+class ItemAttributeChoicesSlugsDuplicateItemInstanceSlug(Exception):
+    def __init__(self, attr_class, item):
+        self.attr_class = attr_class
+        self.item_pk = item.pk
+        self.error = "Attribute class '{}' have choices that clashes with item instance slug, item.pk: '{}'"
+
+    def __repr__(self):
+        return self.error.format(self.attr_class, self.item_pk)
+
+    def __str__(self):
+        return self.error.format(self.attr_class, self.item_pk)
