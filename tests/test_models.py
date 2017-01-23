@@ -11,7 +11,7 @@ Tests for `djcat` models module.
 from django.test import TestCase
 
 from catalog.models import Category
-from djcat.exceptions import CategoryInheritanceError, CategoryRootCheckError
+from djcat.exceptions import *
 
 
 class TestCategoryCase(TestCase):
@@ -97,6 +97,12 @@ class TestCategoryCase(TestCase):
         c1 = self.create_instance(title="root", parent=c)
         c1.parent = None
         self.assertRaises(CategoryRootCheckError, c1.save)
+
+    def test_slug_clashes_with_attrs_slugs(self):
+        self.assertEqual(self.create_instance(title='Кирпичный', slug='kirpichnyu',
+                                              item_class='catalog_module_realty.models.FlatBuy').slug,
+                         'kirpichnyi-1')
+
 
 # class TestDjcat(TestCase):
 #

@@ -25,6 +25,19 @@ class CategoryRootCheckError(Exception):
         return _(self.error).format(self.title)
 
 
+class CategorySlugClashWithAttr(Exception):
+    def __init__(self, title, slug):
+        self.title = title
+        self.slug = slug
+        self.error = "Category with title '{}' and slug '{}' clashes with attr slug."
+
+    def __repr__(self):
+        return self.error.format(self.title, self.slug)
+
+    def __str__(self):
+        return _(self.error).format(self.title, self.slug)
+
+
 class ItemModuleNameNotDefined(Exception):
     def __init__(self, item_class, item_module):
         self.item_class = item_class
@@ -43,7 +56,7 @@ class ItemModuleNameDuplicate(Exception):
         self.module = module
         self.module_name = module_name
         self.duplicated_module = item_module
-        self.error = "Name '{}' in module '{}' already defined in module '{}'"
+        self.error = "Name '{}' in module '{}' already defined in module '{}'."
 
     def __repr__(self):
         return self.error.format(self.module_name, self.module, self.duplicated_module)
@@ -56,7 +69,7 @@ class ItemNameDuplicate(Exception):
     def __init__(self, item_name, item_module):
         self.item_name = item_name
         self.item_module = item_module
-        self.error = "Item name '{}' duplicate in module '{}'"
+        self.error = "Item name '{}' duplicate in module '{}'."
 
     def __repr__(self):
         return self.error.format(self.item_name, self.item_module)
@@ -69,7 +82,7 @@ class ItemAttributeUnknownType(Exception):
     def __init__(self, attr_class, attr_type):
         self.attr_class = attr_class
         self.attr_type = attr_type
-        self.error = "Attribute class '{}' unknown type '{}'"
+        self.error = "Attribute class '{}' unknown type '{}'."
 
     def __repr__(self):
         return self.error.format(self.attr_class, self.attr_type)
@@ -81,7 +94,7 @@ class ItemAttributeUnknownType(Exception):
 class ItemAttributeKeyNotPresent(Exception):
     def __init__(self, attr_class):
         self.attr_class = attr_class
-        self.error = "Attribute class '{}' has no key"
+        self.error = "Attribute class '{}' has no key."
 
     def __repr__(self):
         return self.error.format(self.attr_class)
@@ -95,7 +108,7 @@ class ItemAttributeKeyDuplicate(Exception):
         self.attr_class_dup = attr_class_dup
         self.attr_class_cur = attr_class_cur
         self.attr_key = attr_key
-        self.error = "Attribute key '{}' duplicate in classes: '{}', '{}'"
+        self.error = "Attribute key '{}' duplicate in classes: '{}', '{}'."
 
     def __repr__(self):
         return self.error.format(self.attr_key, self.attr_class_cur, self.attr_class_dup)
@@ -107,7 +120,7 @@ class ItemAttributeKeyDuplicate(Exception):
 class ItemAttributeNameNotPresent(Exception):
     def __init__(self, attr_class):
         self.attr_class = attr_class
-        self.error = "Attribute class '{}' has no name"
+        self.error = "Attribute class '{}' has no name."
 
     def __repr__(self):
         return self.error.format(self.attr_class)
@@ -119,7 +132,7 @@ class ItemAttributeNameNotPresent(Exception):
 class ItemAttributeVerboseNameNotPresent(Exception):
     def __init__(self, attr_class):
         self.attr_class = attr_class
-        self.error = "Attribute class '{}' has no verbose_name"
+        self.error = "Attribute class '{}' has no verbose_name."
 
     def __repr__(self):
         return self.error.format(self.attr_class)
@@ -131,7 +144,7 @@ class ItemAttributeVerboseNameNotPresent(Exception):
 class PathNotValid(Exception):
     def __init__(self, path):
         self.path = path
-        self.error = "Path '{}' not valid"
+        self.error = "Path '{}' not valid."
 
     def __repr__(self):
         return self.error.format(self.path)
@@ -143,7 +156,7 @@ class PathNotValid(Exception):
 class PathNotFound(Exception):
     def __init__(self, path):
         self.path = path
-        self.error = "Path '{}' not found"
+        self.error = "Path '{}' not found."
 
     def __repr__(self):
         return self.error.format(self.path)
@@ -155,7 +168,7 @@ class PathNotFound(Exception):
 class ItemAttributeChoicesSlugsDuplicate(Exception):
     def __init__(self, attr_class):
         self.attr_class = attr_class
-        self.error = "Attribute class '{}' duplicate choices slugs"
+        self.error = "Attribute class '{}' duplicate choices slugs."
 
     def __repr__(self):
         return self.error.format(self.attr_class)
@@ -168,7 +181,7 @@ class ItemAttributeChoicesSlugsDuplicateInCatalogItem(Exception):
     def __init__(self, attr_class, another_attr_class):
         self.attr_class = attr_class
         self.another_attr_class = another_attr_class
-        self.error = "Attribute class '{}' have choices that duplicates choices in class '{}'"
+        self.error = "Attribute class '{}' have choices that duplicates choices in class '{}'."
 
     def __repr__(self):
         return self.error.format(self.attr_class, self.another_attr_class)
@@ -182,7 +195,7 @@ class ItemAttributeChoicesSlugsDuplicateWithcCategory(Exception):
         self.attr_class = attr_class
         self.category = category
         self.error = "Attribute class '{}' have choices that clashes with category instance slug, " \
-                     "category instance: '{}'"
+                     "category instance: '{}'."
 
     def __repr__(self):
         return self.error.format(self.attr_class, self.category)
@@ -195,7 +208,7 @@ class ItemAttributeChoicesSlugsDuplicateItemInstanceSlug(Exception):
     def __init__(self, attr_class, item):
         self.attr_class = attr_class
         self.item_pk = item.pk
-        self.error = "Attribute class '{}' have choices that clashes with item instance slug, item.pk: '{}'"
+        self.error = "Attribute class '{}' have choices that clashes with item instance slug, item.pk: '{}'."
 
     def __repr__(self):
         return self.error.format(self.attr_class, self.item_pk)

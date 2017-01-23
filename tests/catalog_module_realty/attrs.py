@@ -4,7 +4,7 @@ from djcat.attrs import ChoiceAttribute, catalog_attribute
 @catalog_attribute(name='building_type', verbose_name='Тип строения', key='rbt')
 class BuildingTypeAttribute(ChoiceAttribute):
     attr_choices = (
-        (1, 'Кирпичный', 'kirpichnuy'),
+        (1, 'Кирпичный', 'kirpichnyi'),
         (2, 'Панельный', 'panelnuy'),
         (3, 'Блочный', 'blochnuy'),
         (4, 'Монолитный', 'monolitnuy'),
@@ -25,5 +25,4 @@ class RoomAttribute(ChoiceAttribute):
         (8, '7 комнатная', '7komnatnye'),
         (9, '8 комнатная', '8komnatnye'),
         (10, '9 комнатная', '9komnatnye'),
-        (11, '10 и больше комнат', 'bolshe9komnat'),
-    )
+        (11, '10 и больше комнат', 'bolshe9komnat'),    )

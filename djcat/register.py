@@ -153,4 +153,3 @@ class CatalogItem:
         return attrs
 
 
-

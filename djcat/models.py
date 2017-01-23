@@ -8,9 +8,9 @@ from django.utils.translation import ugettext as _
 
 from mptt.models import MPTTModel, TreeForeignKey
 
+from djcat.register import CatalogItem
 from .utils import create_slug, unique_slug
-from .exceptions import CategoryInheritanceError, ItemModuleNameNotDefined, ItemModuleNameDuplicate, ItemNameDuplicate, \
-    CategoryRootCheckError, ItemAttributeKeyNotPresent, ItemAttributeKeyDuplicate
+from .exceptions import *
 
 
 class BaseDjcat:
@@ -142,8 +142,9 @@ class DjcatCategory(MPTTModel, BaseDjcat):
         If passed instance before save(), checks if new slug (in admin edit for example) unique and make unique if not.
         :param instance_before: Category instance before save()
         """
+        reserved_slugs = self.get_reserved_slugs()
         if not instance_before:
-            self.slug = unique_slug(self.__class__, create_slug(self.title))
+            self.slug = unique_slug(self.__class__, create_slug(self.title), reserved_slugs=reserved_slugs)
         else:
             if not instance_before.slug == self.slug:
                 self.slug = unique_slug(self.__class__, self.slug, instance=self)
@@ -169,6 +170,16 @@ class DjcatCategory(MPTTModel, BaseDjcat):
         if self.parent and self.parent.is_endpoint:
             raise CategoryInheritanceError(invalid_category=self.parent)
 
+    def get_reserved_slugs(self):
+        slugs = []
+        if self.item_class:
+            item_class = CatalogItem.get_item_by_class(self.item_class)
+            if item_class:
+                for a in item_class.attrs:
+                    if a.type == 'choice':
+                        slugs.extend(a.choices)
+        return slugs
+
     def save(self, *args, **kwargs):
         """
         Saves instance and update tree
@@ -186,7 +197,7 @@ class DjcatCategory(MPTTModel, BaseDjcat):
             self.check_inheritance()
             if self.is_endpoint and not self.is_unique_in_path:
                 self.is_unique_in_path = True
-            self.create_slug(instance_before)
+            self.create_slug(instance_before=instance_before)
 
             super(DjcatCategory, self).save(*args, **kwargs)
             self.__class__.objects.update_tree(self, instance_before)
