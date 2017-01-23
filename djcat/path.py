@@ -11,6 +11,7 @@ class Path:
         self.CategoryModel = apps.get_model(settings.DJCAT_CATEGORY_MODEL)
         self.in_path = path
         self.category = None
+        self.attrs = None
         self.path_list = []
         self.resolve()
 
@@ -63,6 +64,21 @@ class Path:
         """
         return slug in attr_paths
 
+    def get_attrs(self, node, resolved_attr_slugs):
+        """
+        Return resolved attribute with selected slug
+        :param node: Category instance
+        :param resolved_attr_slugs: List of resolved slugs
+        :return: List of dictionaries
+        """
+        attrs = []
+        item = CatalogItem.get_item_by_class(node.item_class)
+        for slug in resolved_attr_slugs:
+            for a in item.attrs:
+                if a.choices and slug in a.choices:
+                    attrs.append({'attribute': a, 'selected_value': slug})
+        return attrs
+
     def resolve_mix_path(self, category_paths, attr_paths):
         """
         Resolve path that probably contain category paths (slugs) and category attributes paths (slugs)
@@ -78,6 +94,7 @@ class Path:
                 resolved.append({'attr': slug})
         if not len(resolved) == len(self.path_list):
             raise PathNotFound(self.in_path)
+        return resolved
 
     def resolve(self):
         self.path_list = [p for p in self.in_path.split('/') if len(p)] if self.in_path else []
@@ -99,5 +116,7 @@ class Path:
                     attr_paths = self.get_category_attr_paths(node)
                     if not len(attr_paths):
                         continue
-                    self.resolve_mix_path(category_paths, attr_paths)
+                    resolved = self.resolve_mix_path(category_paths, attr_paths)
                     self.category = node
+                    self.attrs = self.get_attrs(node, [x['attr'] for x in resolved if x.get('attr')])
+                    print()

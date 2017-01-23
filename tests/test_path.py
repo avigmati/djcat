@@ -58,7 +58,7 @@ class TestPathCase(TestCase):
         path = Path(path='kvartiry/kupliu')
         self.assertEqual(path.category, c2)
 
-    def test_check_category_instance_with_attr(self):
+    def test_check_category_instance_with_one_attr(self):
         c = self.create_category(title="Недвижимость", is_active=True)
         c1 = self.create_category(title="Квартиры", parent=c, is_unique_in_path=True, is_active=True)
         c2 = self.create_category(title="Куплю", parent=c1, is_active=True,
@@ -66,6 +66,21 @@ class TestPathCase(TestCase):
 
         path = Path(path='kvartiry/kupliu/kirpichnuy')
         self.assertEqual(path.category, c2)
+        self.assertEqual(path.attrs[0]['attribute'].name, 'building_type')
+        self.assertEqual(path.attrs[0]['selected_value'], 'kirpichnuy')
+
+    def test_check_category_instance_with_two_attr(self):
+        c = self.create_category(title="Недвижимость", is_active=True)
+        c1 = self.create_category(title="Квартиры", parent=c, is_unique_in_path=True, is_active=True)
+        c2 = self.create_category(title="Куплю", parent=c1, is_active=True,
+                                  item_class='catalog_module_realty.models.FlatBuy')
+
+        path = Path(path='kvartiry/kupliu/kirpichnuy/studio')
+        self.assertEqual(path.category, c2)
+        self.assertEqual(path.attrs[0]['attribute'].name, 'building_type')
+        self.assertEqual(path.attrs[0]['selected_value'], 'kirpichnuy')
+        self.assertEqual(path.attrs[1]['attribute'].name, 'room')
+        self.assertEqual(path.attrs[1]['selected_value'], 'studio')
 
 
         # in_path = '/nedvizhimost/kvartiry/kupliu/'

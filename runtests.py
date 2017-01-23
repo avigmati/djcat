@@ -1,56 +1,14 @@
 #!/usr/bin/env python
 
 import os, sys
-from django.core.management import call_command
 
+BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tests')
+sys.path.insert(0, BASE_DIR)
 
 try:
     from django.conf import settings
+    from django.core.management import call_command
     from django.test.utils import get_runner
-
-    BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tests')
-    sys.path.insert(0, BASE_DIR)
-
-    settings.configure(
-        DEBUG=True,
-        USE_TZ=True,
-        DATABASES={
-            "default": {
-                'NAME': os.path.join(BASE_DIR, 'test_db.sqlite3'),
-                "ENGINE": "django.db.backends.sqlite3",
-            }
-        },
-        ROOT_URLCONF="djcat.urls",
-
-        INSTALLED_APPS=[
-            "django.contrib.auth",
-            "django.contrib.contenttypes",
-            "django.contrib.sites",
-            "mptt",
-            "djcat",
-            "catalog",
-            "catalog_module_realty"
-        ],
-        SITE_ID=1,
-        MIDDLEWARE_CLASSES=(),
-
-        DJCAT_ATTR_TYPES=['simply', 'choice'],
-        DJCAT_CATEGORY_MODEL='catalog.Category'
-    )
-
-    try:
-        import django
-        setup = django.setup
-    except AttributeError:
-        pass
-    else:
-        setup()
-        call_command('migrate')
-        call_command('makemigrations', 'catalog')
-        call_command('makemigrations', 'catalog_module_realty')
-        call_command('migrate', 'catalog')
-        call_command('migrate', 'catalog_module_realty')
-
 except ImportError:
     import traceback
     traceback.print_exc()
@@ -58,11 +16,25 @@ except ImportError:
     raise ImportError(msg)
 
 
+def setup_proj():
+    try:
+        from test_settings import settings_for_test
+        import django
+        setup = django.setup
+    except AttributeError:
+        pass
+    else:
+        settings.configure(**settings_for_test())
+        setup()
+
+
 def run_tests(*test_args):
+
+    setup_proj()
+
     if not test_args:
         test_args = ['tests']
 
-    # Run tests
     TestRunner = get_runner(settings)
     test_runner = TestRunner()
 
@@ -73,4 +45,7 @@ def run_tests(*test_args):
 
 
 if __name__ == '__main__':
+    # first migrate
+    os.system(os.path.join(os.path.dirname(os.path.abspath(__file__)), "migrate_test_project.py"))
+    # then run tests
     run_tests(*sys.argv[1:])
