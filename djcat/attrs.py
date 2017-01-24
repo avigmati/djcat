@@ -1,6 +1,6 @@
 from django.apps import apps
 from django.conf import settings
-
+from django.core.exceptions import ObjectDoesNotExist
 
 from djcat.exceptions import *
 from djcat.register import CatalogItem
@@ -183,6 +183,10 @@ class ChoiceAttribute(BaseAttribute):
         :param slugs: List - slugs
         :return:
         """
+        for s in slugs:
+            if settings.DJCAT_ITEM_SLUG_DELIMETER in s:
+                raise ItemAttributeChoicesSlugNotValid(self)
+
         if not len(set(slugs)) == len(slugs):
             raise ItemAttributeChoicesSlugsDuplicate(self)
 
@@ -220,6 +224,8 @@ class ChoiceAttribute(BaseAttribute):
         for m in registry.items():
             for i in m[1]['items'].items():
                 for slug in slugs:
-                    found = list(i[1]['_class'].objects.filter(slug=slug))
-                    if len(found):
-                        raise ItemAttributeChoicesSlugsDuplicateItemInstanceSlug(self, found[0])
+                    try:
+                        item = i[1]['_class'].objects.get(slug=slug)
+                        raise ItemAttributeChoicesSlugsDuplicateItemInstanceSlug(self, item)
+                    except ObjectDoesNotExist:
+                        pass

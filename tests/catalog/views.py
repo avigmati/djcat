@@ -12,7 +12,7 @@ def test_v(request):
     #
     # from catalog.models import Category
     # c = Category.objects.get(pk=1)
-    # # aa = FlatBuy.objects.create(title='test', slug='test', price=100, category=c)
+    # # aa = FlatBuy.objects.create(name='test', slug='test', price=100, category=c)
     # aa = FlatBuy.objects.get(pk=1)
 
     return HttpResponse('ok')

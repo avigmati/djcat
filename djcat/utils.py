@@ -34,9 +34,9 @@ def split_slug_on_appendix(slug):
     return slug, appendix
 
 
-def unique_slug(model, slug, instance=None):
+def unique_slug(model, slug, instance=None, reserved_slugs=[]):
     """
-    Return unique slug for passed django instance.
+    Return unique slug for passed django model class.
     :param model: Django model class
     :param slug: String. Slug for make unique
     :param instance: Django model instance
@@ -45,10 +45,10 @@ def unique_slug(model, slug, instance=None):
     orig, apdx = split_slug_on_appendix(slug)
     for x in itertools.count(1):
         if instance:
-            if not model.objects.filter(slug=slug).exclude(pk=instance.pk).exists():
+            if not model.objects.filter(slug=slug).exclude(pk=instance.pk).exists() and slug not in reserved_slugs:
                 break
         else:
-            if not model.objects.filter(slug=slug).exists():
+            if not model.objects.filter(slug=slug).exists() and slug not in reserved_slugs:
                 break
         slug = '%s-%d' % (orig, x)
     return slug

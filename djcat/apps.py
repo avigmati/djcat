@@ -12,7 +12,8 @@ class DjcatConfig(AppConfig):
             from .__init__ import __version__
             from .register import CatalogItem
             print()
-            print('Djcat {} loaded with structure:'.format(__version__))
-            pprint(CatalogItem.REGISTRY)
-            print('load attributes...')
-            CatalogItem.load_items_attributes()
+            print('Djcat v{} loading...'.format(__version__))
+            if settings.DJCAT_INIT_ATTR:
+                CatalogItem.load_items_attributes()
+                print('Loaded with structure:')
+                pprint(CatalogItem.REGISTRY)

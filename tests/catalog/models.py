@@ -11,3 +11,6 @@ class Category(DjcatCategory):
 
 class BaseAd(DjcatItem):
     price = PriceField(verbose_name="Price")
+
+    def create_name(self):
+        return self.name
