@@ -28,7 +28,9 @@ settings = dict(
 
     DJCAT_INIT_ATTR=False,
     DJCAT_ATTR_TYPES=['simply', 'choice'],
-    DJCAT_CATEGORY_MODEL='catalog.Category'
+    DJCAT_CATEGORY_MODEL='catalog.Category',
+    DJCAT_ITEM_SLUG_DELIMETER='_',
+    DJCAT_ITEM_UID_LENGTH=8
 )
 
 def settings_for_migrate():

@@ -10,18 +10,19 @@ Tests for `djcat` catalog path.
 
 from django.test import TestCase
 
-from djcat.register import CatalogItem
+from django.apps import apps
+from django.conf import settings
+
 from djcat.path import Path
 from djcat.exceptions import *
-
-from catalog.models import Category
 
 
 class TestPathCase(TestCase):
     """Path test"""
 
     def create_category(self, **kwargs):
-        c = Category.objects.create(**kwargs)
+        self.CategoryModel = apps.get_model(settings.DJCAT_CATEGORY_MODEL)
+        c = self.CategoryModel.objects.create(**kwargs)
         c.refresh_from_db()
         return c
 
@@ -42,9 +43,9 @@ class TestPathCase(TestCase):
         self.assertRaises(PathNotFound, Path, path='/sdgsdgf/')
 
     def test_check_category_instance(self):
-        c = self.create_category(title="Недвижимость", is_active=True)
-        c1 = self.create_category(title="Квартиры", parent=c, is_unique_in_path=True, is_active=True)
-        c2 = self.create_category(title="Куплю", parent=c1, is_active=True,
+        c = self.create_category(name="Недвижимость", is_active=True)
+        c1 = self.create_category(name="Квартиры", parent=c, is_unique_in_path=True, is_active=True)
+        c2 = self.create_category(name="Куплю", parent=c1, is_active=True,
                                   item_class='catalog_module_realty.models.FlatBuy')
         self.assertEqual(c2.get_url_paths(),
                          {'full': ['nedvizhimost', 'kvartiry', 'kupliu'], 'unique': ['kvartiry', 'kupliu']})
@@ -59,9 +60,9 @@ class TestPathCase(TestCase):
         self.assertEqual(path.category, c2)
 
     def test_check_category_instance_with_one_attr(self):
-        c = self.create_category(title="Недвижимость", is_active=True)
-        c1 = self.create_category(title="Квартиры", parent=c, is_unique_in_path=True, is_active=True)
-        c2 = self.create_category(title="Куплю", parent=c1, is_active=True,
+        c = self.create_category(name="Недвижимость", is_active=True)
+        c1 = self.create_category(name="Квартиры", parent=c, is_unique_in_path=True, is_active=True)
+        c2 = self.create_category(name="Куплю", parent=c1, is_active=True,
                                   item_class='catalog_module_realty.models.FlatBuy')
 
         path = Path(path='kvartiry/kupliu/kirpichnyi')
@@ -70,9 +71,9 @@ class TestPathCase(TestCase):
         self.assertEqual(path.attrs[0]['selected_value'], 'kirpichnyi')
 
     def test_check_category_instance_with_two_attr(self):
-        c = self.create_category(title="Недвижимость", is_active=True)
-        c1 = self.create_category(title="Квартиры", parent=c, is_unique_in_path=True, is_active=True)
-        c2 = self.create_category(title="Куплю", parent=c1, is_active=True,
+        c = self.create_category(name="Недвижимость", is_active=True)
+        c1 = self.create_category(name="Квартиры", parent=c, is_unique_in_path=True, is_active=True)
+        c2 = self.create_category(name="Куплю", parent=c1, is_active=True,
                                   item_class='catalog_module_realty.models.FlatBuy')
 
         path = Path(path='kvartiry/kupliu/kirpichnyi/studio')
@@ -82,9 +83,3 @@ class TestPathCase(TestCase):
         self.assertEqual(path.attrs[1]['attribute'].name, 'room')
         self.assertEqual(path.attrs[1]['selected_value'], 'studio')
 
-
-        # in_path = '/nedvizhimost/kvartiry/kupliu/'
-        # path = Path(path=in_path)
-        # print()
-
-        # self.assertEqual(path.get_category()['category'], c2)

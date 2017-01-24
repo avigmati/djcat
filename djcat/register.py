@@ -26,11 +26,10 @@ class CatalogItem:
         """
         Register item modules and its item classes.
         :param cls: Class object
-        :return: Class object
+        :return:
         """
         module_name, module = self.register_module(cls)
         self.__class__.REGISTRY[module_name] = self.register_item(module, cls)
-        # self.load_items_attributes()
 
     def register_module(self, cls):
         """

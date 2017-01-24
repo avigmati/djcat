@@ -1,4 +1,5 @@
 from django.utils.translation import ugettext as _
+from django.conf import settings
 
 
 class CategoryInheritanceError(Exception):
@@ -14,28 +15,28 @@ class CategoryInheritanceError(Exception):
 
 
 class CategoryRootCheckError(Exception):
-    def __init__(self, title):
-        self.title = title
+    def __init__(self, name):
+        self.name = name
         self.error = "Category '{}' can't be root because root category with same name present."
 
     def __repr__(self):
-        return self.error.format(self.title)
+        return self.error.format(self.name)
 
     def __str__(self):
-        return _(self.error).format(self.title)
+        return _(self.error).format(self.name)
 
 
 class CategorySlugClashWithAttr(Exception):
-    def __init__(self, title, slug):
-        self.title = title
+    def __init__(self, name, slug):
+        self.name = name
         self.slug = slug
-        self.error = "Category with title '{}' and slug '{}' clashes with attr slug."
+        self.error = "Category with name '{}' and slug '{}' clashes with attr slug."
 
     def __repr__(self):
-        return self.error.format(self.title, self.slug)
+        return self.error.format(self.name, self.slug)
 
     def __str__(self):
-        return _(self.error).format(self.title, self.slug)
+        return _(self.error).format(self.name, self.slug)
 
 
 class ItemModuleNameNotDefined(Exception):
@@ -69,7 +70,7 @@ class ItemNameDuplicate(Exception):
     def __init__(self, item_name, item_module):
         self.item_name = item_name
         self.item_module = item_module
-        self.error = "Item name '{}' duplicate in module '{}'."
+        self.error = "Item class name '{}' duplicate in module '{}'."
 
     def __repr__(self):
         return self.error.format(self.item_name, self.item_module)
@@ -215,3 +216,27 @@ class ItemAttributeChoicesSlugsDuplicateItemInstanceSlug(Exception):
 
     def __str__(self):
         return self.error.format(self.attr_class, self.item_pk)
+
+
+class ItemAttributeChoicesSlugNotValid(Exception):
+    def __init__(self, attr_class):
+        self.attr_class = attr_class
+        self.error = "Attribute class '{}' choices slugs should not contain '{}'."
+
+    def __repr__(self):
+        return self.error.format(self.attr_class, settings.DJCAT_ITEM_SLUG_DELIMETER)
+
+    def __str__(self):
+        return self.error.format(self.attr_class, settings.DJCAT_ITEM_SLUG_DELIMETER)
+
+
+class ItemNameNotValid(Exception):
+    def __init__(self, item_name):
+        self.item_name = item_name
+        self.error = "Item name '{}' should not contain '{}'."
+
+    def __repr__(self):
+        return self.error.format(self.item_name, settings.DJCAT_ITEM_SLUG_DELIMETER)
+
+    def __str__(self):
+        return _(self.error).format(self.item_name, settings.DJCAT_ITEM_SLUG_DELIMETER)

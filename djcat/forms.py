@@ -59,9 +59,9 @@ class CategoryForm(forms.ModelForm):
 
         if not cleaned_data['parent']:
             try:
-                self.Meta.model.check_root(cleaned_data['title'], self.Meta.model)
+                self.Meta.model.check_root(cleaned_data['name'], self.Meta.model)
             except CategoryRootCheckError as e:
-                self.add_error('title', '')
+                self.add_error('name', '')
                 self.add_error('parent', '')
                 raise forms.ValidationError(e)
 

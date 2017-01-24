@@ -5,11 +5,12 @@ from django.db import models
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.utils.translation import ugettext as _
+from django.conf import settings
 
 from mptt.models import MPTTModel, TreeForeignKey
 
 from djcat.register import CatalogItem
-from .utils import create_slug, unique_slug
+from .utils import create_slug, unique_slug, create_uid
 from .exceptions import *
 
 
@@ -34,6 +35,15 @@ class BaseDjcat:
     @abc.abstractmethod
     def create_slug(self, *args, **kwargs):
         """Create item slug"""
+
+    def check_name(self, name):
+        """
+        Check name contains not allowed symbols
+        :param name:
+        :return:
+        """
+        if settings.DJCAT_ITEM_SLUG_DELIMETER in name:
+            raise ItemNameNotValid(item_name=name)
 
 
 class BaseCategoryManager(models.Manager):
@@ -98,7 +108,7 @@ class BaseCategoryManager(models.Manager):
 
 
 class DjcatCategory(MPTTModel, BaseDjcat):
-    title = models.CharField(max_length=400, verbose_name=_('Title'))
+    name = models.CharField(max_length=400, verbose_name=_('Category name'))
     slug = models.SlugField(max_length=420, verbose_name='Slug', blank=True)
     parent = TreeForeignKey('self', null=True, blank=True, related_name=_('Children'), db_index=True,
                             verbose_name=_('Parent category'))
@@ -113,7 +123,7 @@ class DjcatCategory(MPTTModel, BaseDjcat):
     objects = BaseCategoryManager()
 
     class MPTTMeta:
-        order_insertion_by = ['title']
+        order_insertion_by = ['name']
 
     class Meta:
         abstract = True
@@ -121,10 +131,10 @@ class DjcatCategory(MPTTModel, BaseDjcat):
         verbose_name_plural = _('Categories')
 
     def __str__(self):
-        return self.title
+        return self.name
 
     def __unicode__(self):
-        return self.title
+        return self.name
 
     def get_url(self):
         return 'url'
@@ -144,23 +154,23 @@ class DjcatCategory(MPTTModel, BaseDjcat):
         """
         reserved_slugs = self.get_reserved_slugs()
         if not instance_before:
-            self.slug = unique_slug(self.__class__, create_slug(self.title), reserved_slugs=reserved_slugs)
+            self.slug = unique_slug(self.__class__, create_slug(self.name), reserved_slugs=reserved_slugs)
         else:
             if not instance_before.slug == self.slug:
                 self.slug = unique_slug(self.__class__, self.slug, instance=self)
 
     @classmethod
-    def check_root(cls, title, model, instance_before=None):
+    def check_root(cls, name, model, instance_before=None):
         """
         Check for root with same name not present
         :return:
         """
         if instance_before:
-            find = model.objects.filter(title=title).exclude(pk=instance_before.pk).count()
+            find = model.objects.filter(name=name).exclude(pk=instance_before.pk).count()
         else:
-            find = model.objects.filter(title=title).count()
+            find = model.objects.filter(name=name).count()
         if find:
-            raise CategoryRootCheckError(title=title)
+            raise CategoryRootCheckError(name=name)
 
     def check_inheritance(self):
         """
@@ -189,9 +199,10 @@ class DjcatCategory(MPTTModel, BaseDjcat):
         """
         update_process = kwargs.pop('update_process', False)
         if not update_process:
+            self.check_name(self.name)
             instance_before = self.__class__.objects.get(pk=self.pk) if self.id else None
             if not self.parent:
-                self.__class__.check_root(self.title, self.__class__, instance_before=instance_before)
+                self.__class__.check_root(self.name, self.__class__, instance_before=instance_before)
                 self.is_root = True
             self.is_endpoint = True if self.item_class else False
             self.check_inheritance()
@@ -206,8 +217,9 @@ class DjcatCategory(MPTTModel, BaseDjcat):
 
 
 class DjcatItem(models.Model, BaseDjcat):
-    title = models.CharField(max_length=200, verbose_name=_('Title'))
+    name = models.CharField(max_length=200, verbose_name=_('Item name'))
     slug = models.SlugField(max_length=200, verbose_name='Slug', blank=True)
+    uid = models.CharField(max_length=200)
     active = models.BooleanField(verbose_name=_('Active'), default=False)
 
     content_type = models.ForeignKey(ContentType)
@@ -218,24 +230,65 @@ class DjcatItem(models.Model, BaseDjcat):
         abstract = True
 
     def __str__(self):
-        return self.title
+        return self.name
 
     def __unicode__(self):
-        return self.title
+        return self.name
 
     def get_url(self):
         return 'url'
 
-    def create_slug(self, instance_before):
+    def create_name(self):
         """
-        Create and make unique slug.
-        If passed instance before save(), checks if new slug (in admin edit for example) unique and make unique if not.
-        :param instance_before: Category instance before save()
+        Create name for item
+        :return:
         """
-        if not instance_before:
-            self.slug = unique_slug(self.__class__, create_slug(self.title))
-        else:
-            if not instance_before.slug == self.slug:
-                self.slug = unique_slug(self.__class__, self.slug, instance=self)
+        raise NotImplementedError('create_name() must implement in subclasses.')
+
+    def create_uid(self, size=settings.DJCAT_ITEM_UID_LENGTH):
+        """
+        Return unique string
+        :param size: Integer, string length
+        :return: String
+        """
+        return create_uid(self.__class__, size)
+
+    def get_name_for_slug(self):
+        """
+        Return normalized name for slug creation
+        :return: String, normalized name
+        """
+        name = ' '.join([x for x in self.name.split(' ') if len(x)])
+        self.check_name(name)
+        return name
+
+    def get_reserved_slugs(self):
+        """
+        Return item class attributes slugs
+        :return: List, attributes slugs
+        """
+        slugs = []
+        item_class = CatalogItem.get_item_by_class(self.__class__.__module__+'.'+self.__class__.__name__)
+        for a in item_class.attrs:
+            if a.type == 'choice':
+                slugs.extend(a.choices)
+        return slugs
+
+    def save(self, *args, **kwargs):
+        self.create_name()
+        self.create_slug()
+        super(DjcatItem, self).save(*args, **kwargs)
+
+    def create_slug(self):
+        """
+        Create and make unique slug with uid.
+        """
+        if not self.id:
+            self.uid = self.create_uid()
+        # hehe shit happens
+        self.slug = create_slug(self.get_name_for_slug()) + settings.DJCAT_ITEM_SLUG_DELIMETER + self.uid
+        while self.slug in self.get_reserved_slugs():
+            self.slug = create_slug(self.get_name_for_slug()) + settings.DJCAT_ITEM_SLUG_DELIMETER + self.uid
+
 
 

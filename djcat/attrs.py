@@ -183,6 +183,10 @@ class ChoiceAttribute(BaseAttribute):
         :param slugs: List - slugs
         :return:
         """
+        for s in slugs:
+            if settings.DJCAT_ITEM_SLUG_DELIMETER in s:
+                raise ItemAttributeChoicesSlugNotValid(self)
+
         if not len(set(slugs)) == len(slugs):
             raise ItemAttributeChoicesSlugsDuplicate(self)
 
