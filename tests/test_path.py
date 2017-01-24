@@ -14,6 +14,7 @@ from django.apps import apps
 from django.conf import settings
 
 from djcat.path import Path
+from djcat.register import CatalogItem
 from djcat.exceptions import *
 
 
@@ -83,3 +84,16 @@ class TestPathCase(TestCase):
         self.assertEqual(path.attrs[1]['attribute'].name, 'room')
         self.assertEqual(path.attrs[1]['selected_value'], 'studio')
 
+    def test_check_item_instance(self):
+        c = self.create_category(name="Недвижимость", is_active=True)
+        c1 = self.create_category(name="Квартиры", parent=c, is_unique_in_path=True, is_active=True)
+        c2 = self.create_category(name="Куплю", parent=c1, is_active=True,
+                                  item_class='catalog_module_realty.models.FlatBuy')
+
+        item_class = CatalogItem.get_item_by_class(c2.item_class)
+        item = item_class.class_obj.objects.create(category=c2,  price=11,
+                                                   building_type=1, room=2)
+
+        path = Path(path='kvartiry/kupliu/'+item.slug)
+        self.assertEqual(path.category, c2)
+        self.assertEqual(path.item, item)
