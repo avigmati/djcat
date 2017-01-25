@@ -111,15 +111,10 @@ class CatalogItem:
             for i in m[1]['items'].items():
                 for f in i[1]['_class']._meta.fields:
                     if getattr(f, '_is_djcat_attr', False):
-                        a = f._attr_class()
-                        if not a.attr_key:
-                            raise ItemAttributeKeyNotPresent(a.__class__)
-                        if not a.attr_name:
-                            raise ItemAttributeNameNotPresent(a.__class__)
-                        if not a.attr_verbose_name:
-                            raise ItemAttributeVerboseNameNotPresent(a.__class__)
+                        attr = f._attr_class
+                        attr.check()
                         i[1]['attrs'].update({
-                            a.get_name(): a.get_values_for_registry(cls.REGISTRY)
+                            attr.attr_name: attr.values_for_registry(cls.REGISTRY)
                         })
 
     @classmethod
