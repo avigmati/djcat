@@ -15,10 +15,10 @@ class Path:
         self.attrs = []
         self.query_allow_multiple = query_allow_multiple
 
-        if path:
-            self.path = path
-            self._path_list = []
-            self.resolve()
+        self.path = path
+        self._path_list = []
+        self.resolve()
+
         if query:
             self.query = query
             self.parse_query()
