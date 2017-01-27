@@ -162,7 +162,7 @@ class Path:
                         self.category = node
                         self.attrs = self.get_attrs(node, [x['attr'] for x in resolved if x.get('attr')])
 
-    def _get_query_attr_clases(self, query):
+    def _get_query_attr_classes(self, query):
         """
         Find and return attributes what found in query string
         :param query: String, query
@@ -194,7 +194,7 @@ class Path:
         :param query: String, query
         :return:
         """
-        attrs = self._get_query_attr_clases(self.query)
+        attrs = self._get_query_attr_classes(self.query)
         for a in attrs:
             attr, query = a[0], a[1]
             value = attr(query=query).parse_query()
