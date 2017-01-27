@@ -68,8 +68,8 @@ class TestPathCase(TestCase):
 
         path = Path(path='kvartiry/kupliu/kirpichnyi')
         self.assertEqual(path.category, c2)
-        self.assertEqual(path.attrs[0]['attribute'].name, 'building_type')
-        self.assertEqual(path.attrs[0]['selected_value'], 'kirpichnyi')
+        self.assertEqual(path.attrs[0]['attribute'].attr_name, 'building_type')
+        self.assertEqual(path.attrs[0]['path_value'], 'kirpichnyi')
 
     def test_check_category_instance_with_two_attr(self):
         c = self.create_category(name="Недвижимость", is_active=True)
@@ -79,10 +79,10 @@ class TestPathCase(TestCase):
 
         path = Path(path='kvartiry/kupliu/kirpichnyi/studio')
         self.assertEqual(path.category, c2)
-        self.assertEqual(path.attrs[0]['attribute'].name, 'building_type')
-        self.assertEqual(path.attrs[0]['selected_value'], 'kirpichnyi')
-        self.assertEqual(path.attrs[1]['attribute'].name, 'room')
-        self.assertEqual(path.attrs[1]['selected_value'], 'studio')
+        self.assertEqual(path.attrs[0]['attribute'].attr_name, 'building_type')
+        self.assertEqual(path.attrs[0]['path_value'], 'kirpichnyi')
+        self.assertEqual(path.attrs[1]['attribute'].attr_name, 'room')
+        self.assertEqual(path.attrs[1]['path_value'], 'studio')
 
     def test_check_item_instance(self):
         c = self.create_category(name="Недвижимость", is_active=True)
@@ -97,3 +97,35 @@ class TestPathCase(TestCase):
         path = Path(path='kvartiry/kupliu/'+item.slug)
         self.assertEqual(path.category, c2)
         self.assertEqual(path.item, item)
+
+    def test_check_query(self):
+        c = self.create_category(name="Недвижимость", is_active=True)
+        c1 = self.create_category(name="Квартиры", parent=c, is_unique_in_path=True, is_active=True)
+        c2 = self.create_category(name="Куплю", parent=c1, is_active=True,
+                                  item_class='catalog_module_realty.models.FlatBuy')
+
+        item_class = CatalogItem.get_item_by_class(c2.item_class)
+        item = item_class.class_obj.objects.create(category=c2,  price=11,
+                                                   building_type=1, room=2)
+
+
+        # realpath: 'kvartiry/kupliu?a=pr_f100-t10000000'
+        path = Path(path='kvartiry/kupliu/', query='pr_f100-t10000000.pr_f5-t15', query_allow_multiple=True)
+        # path = Path(path='kvartiry/kupliu/', query='pr_f100-t10000000.pr_f5-t15', query_allow_multiple=False)
+        print()
+        # path.get_query_attrs(query='pr_f100-t10000000')
+        # print()
+        # path1 = Path(path='kvartiry/kupliu/kirpichnyi', query='rbt_1,2,3')
+        # print()
+        # path2 = Path(path='kvartiry/kupliu/', query='rbt_1-3')
+        # print()
+        # path3 = Path(path='kvartiry/kupliu/kirpichnyi', query='rbt_kirpichnyi')
+        # print()
+        # path4 = Path(path='kvartiry/kupliu/', query='rbt_custom')
+        # print()
+        # print()
+
+
+
+
+        # path = Path(path='kvartiry/kupliu/'+item.slug)

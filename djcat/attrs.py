@@ -3,7 +3,15 @@ from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 
 from djcat.exceptions import *
-from djcat.register import CatalogItem
+
+
+class BaseAttrPath:
+    """
+    Base for attribute and query classes. Need for proper multiple inheritance.
+    http://stackoverflow.com/questions/8688114/python-multi-inheritance-init
+    """
+    def __init__(self, *args, **kwargs):
+        pass
 
 
 def catalog_attribute(name=None, key=None, verbose_name=None):
@@ -44,7 +52,7 @@ def djcat_attr():
     return decorate
 
 
-class BaseAttribute:
+class BaseAttribute(BaseAttrPath):
     """
     Base item attribute class.
      Subclasses must define attributes:
@@ -59,9 +67,8 @@ class BaseAttribute:
     attr_verbose_name = None
     attr_type = None
 
-    # def __init__(self, *args, **kwargs):
-    #     if self.__class__.attr_type not in settings.DJCAT_ATTR_TYPES:
-    #         raise ItemAttributeUnknownType(self.__class__, self.__class__.attr_type)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     @classmethod
     def check(cls):
@@ -118,6 +125,9 @@ class BaseAttribute:
 class SimplyAttribute(BaseAttribute):
     attr_type = 'simply'
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
 
 class ChoiceAttribute(BaseAttribute):
     """
@@ -135,9 +145,8 @@ class ChoiceAttribute(BaseAttribute):
     attr_type = 'choice'
     attr_choices = None
 
-    # def __init__(self):
-    #     super().__init__()
-    #     self.CategoryModel = apps.get_model(settings.DJCAT_CATEGORY_MODEL)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     @classmethod
     def check(cls):
@@ -231,3 +240,86 @@ class ChoiceAttribute(BaseAttribute):
                     except ObjectDoesNotExist:
                         pass
 
+
+class QueryBase(BaseAttrPath):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.query = kwargs.get('query')
+
+    def parse_query(self):
+        """
+        Parse query string
+        :return: Parsed value
+        """
+        raise Exception('parse_query() must implement in subclasses')
+
+
+class NumQuery(QueryBase):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def parse_query(self):
+        if not self.query:
+            return None
+
+        val_type = 'range' if '-' in self.query else 'single'
+
+        if val_type == 'single':
+            return self.parse_val(self.query)
+        else:
+            vals = self.query.split('-')
+            if not len(vals) == 2:
+                return None
+
+            _values = [self.parse_val(v) for v in vals]
+            if None in _values:
+                return None
+
+            _from, _to = None, None
+            for v in _values:
+                if 'from' in v:
+                    _from = v.get('from')
+                if 'to' in v:
+                    _to = v.get('to')
+            if _from > _to or _from == _to:
+                return None
+
+            value = {}
+            for v in _values:
+                value.update(v)
+
+            return value
+
+    def parse_val(self, val):
+        value = {}
+        if 'f' not in val and 't' not in val:
+            return None
+        if 'f' in val:
+            try:
+                value['from'] = int(val.replace('f', ''))
+                return value
+            except ValueError:
+                return None
+        else:
+            try:
+                value['to'] = int(val.replace('t', ''))
+                return value
+            except ValueError:
+                return None
+
+#
+# class ChoiceQuery(QueryBase):
+#     def __init__(self, *args, **kwargs):
+#         super().__init__(*args, **kwargs)
+#
+#     def parse_query(self):
+#         if not self.query:
+#             raise Exception('bad query')
+#         t = self.get_query_type()
+#         return self.query
+#
+#     def get_query_type(self):
+#         # for x in self.attr.attr_choices:
+#         #     if query == x[0] or query == x[2]:
+#         #         return cls.__name__
+#         return False

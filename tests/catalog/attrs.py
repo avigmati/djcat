@@ -1,11 +1,11 @@
-from djcat.attrs import SimplyAttribute, catalog_attribute
+from djcat.attrs import SimplyAttribute, NumQuery
 
 
-# @catalog_attribute(name='price', verbose_name='Цена', key='pr')
-# @catalog_attribute(name='price', verbose_name='Цена')
-# @catalog_attribute()
-class PriceAttribute(SimplyAttribute):
+class PriceAttribute(SimplyAttribute, NumQuery):
     attr_key = 'pr'
     attr_name = 'price'
     attr_verbose_name = 'Цена'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
