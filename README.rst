@@ -8,42 +8,17 @@ djcat
 .. image:: https://travis-ci.org/avigmati/djcat.png?branch=master
     :target: https://travis-ci.org/avigmati/djcat
 
-Simply app for creating catalog.
+Simply app for creating catalog. APP NOT READY, WORK IN PROGRESS...
 
 Documentation
 -------------
 
-The full documentation is at https://djcat.readthedocs.io.
+* TODO
 
 Quickstart
 ----------
 
-Install djcat::
-
-    pip install djcat
-
-Add it to your `INSTALLED_APPS`:
-
-.. code-block:: python
-
-    INSTALLED_APPS = (
-        ...
-        'djcat.apps.DjcatConfig',
-        ...
-    )
-
-Add djcat's URL patterns:
-
-.. code-block:: python
-
-    from djcat import urls as djcat_urls
-
-
-    urlpatterns = [
-        ...
-        url(r'^', include(djcat_urls)),
-        ...
-    ]
+* TODO
 
 Features
 --------
@@ -53,13 +28,7 @@ Features
 Running Tests
 -------------
 
-Does the code actually work?
-
-::
-
-    source <YOURVIRTUALENV>/bin/activate
-    (myenv) $ pip install tox
-    (myenv) $ tox
+* TODO
 
 Credits
 -------
