@@ -87,7 +87,7 @@ class Path:
         for slug in resolved_attr_slugs:
             for a in item.attrs:
                 if a.choices and slug in a.choices:
-                    attrs.append({'attribute': a.class_obj, 'path_value': slug})
+                    attrs.append({'attribute': a.class_obj, 'path_value': slug, 'query_value': []})
         return attrs
 
     def get_item_instance(self, category_slug, item_slug):
@@ -198,13 +198,14 @@ class Path:
         for a in attrs:
             attr, query = a[0], a[1]
             value = attr(query=query).parse_query()
-            resolved = False
-            if self.attrs:
-                for _a in self.attrs:
-                    if _a['attribute'] == attr:
-                        _a['query_value'].append(value)
-                        resolved = True
-                if not resolved:
+            if value:
+                resolved = False
+                if self.attrs:
+                    for _a in self.attrs:
+                        if _a['attribute'] == attr:
+                            _a['query_value'].append(value)
+                            resolved = True
+                    if not resolved:
+                        self.attrs.append({'attribute': attr, 'query_value': [value]})
+                else:
                     self.attrs.append({'attribute': attr, 'query_value': [value]})
-            else:
-                self.attrs.append({'attribute': attr, 'query_value': [value]})

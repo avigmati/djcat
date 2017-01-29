@@ -1,11 +1,37 @@
 import importlib
-from collections import namedtuple
 
 from .exceptions import *
 
 
-Item = namedtuple('Item', ['name', 'klass', 'class_obj', 'verbose_name', 'attrs'])
-ItemAttribute = namedtuple('ItemAttribute', ['name', 'klass', 'class_obj', 'verbose_name', 'type', 'key', 'choices'])
+class Item:
+    """
+    Contain item class REGISTRY entry
+    """
+    def __init__(self, name, klass, class_obj, verbose_name, attrs):
+        self.name = name
+        self.klass = klass
+        self.class_obj = class_obj
+        self.verbose_name = verbose_name
+        self.attrs = attrs
+
+    def get_attr_by_key(self, key):
+        for a in self.attrs:
+            if a.key == key:
+                return a
+
+
+class ItemAttribute:
+    """
+    Contain item class attribute REGISTRY entry
+    """
+    def __init__(self, name, klass, class_obj, verbose_name, type, key, choices):
+        self.name = name
+        self.klass = klass
+        self.class_obj = class_obj
+        self.verbose_name = verbose_name
+        self.type = type
+        self.key = key
+        self.choices = choices
 
 
 class CatalogItem:

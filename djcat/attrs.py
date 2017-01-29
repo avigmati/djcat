@@ -1,3 +1,5 @@
+from collections import namedtuple
+
 from django.apps import apps
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
@@ -5,7 +7,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from djcat.exceptions import *
 
 
-class BaseAttrPath:
+class BaseAttrQuery:
     """
     Base for attribute and query classes. Need for proper multiple inheritance.
     http://stackoverflow.com/questions/8688114/python-multi-inheritance-init
@@ -52,7 +54,7 @@ def djcat_attr():
     return decorate
 
 
-class BaseAttribute(BaseAttrPath):
+class BaseAttribute(BaseAttrQuery):
     """
     Base item attribute class.
      Subclasses must define attributes:
@@ -148,6 +150,9 @@ class ChoiceAttribute(BaseAttribute):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    def get_choices_values(self):
+        return [x[0] for x in self.__class__.attr_choices]
+
     @classmethod
     def check(cls):
         super(ChoiceAttribute, cls).check()
@@ -241,10 +246,11 @@ class ChoiceAttribute(BaseAttribute):
                         pass
 
 
-class QueryBase(BaseAttrPath):
+class QueryBase(BaseAttrQuery):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.query = kwargs.get('query')
+        self.value = kwargs.get('value')
 
     def parse_query(self):
         """
@@ -253,25 +259,54 @@ class QueryBase(BaseAttrPath):
         """
         raise Exception('parse_query() must implement in subclasses')
 
+    def build_query(self, value):
+        """
+        Build query string
+        :return: Parsed value
+        """
+        raise Exception('build_query() must implement in subclasses')
 
-class NumQuery(QueryBase):
+
+class NumericQuery(QueryBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    def build_query(self, value):
+        """
+        Build query string from value, value must have format:
+        {'from': numeric value, 'to': numeric value} or {'from': numeric value} or {'to': numeric value}
+        :param value: Dict
+        :return: Query string
+        """
+        if not isinstance(value, dict):
+            raise Exception('Bad value')
+        if not 'from' in value and not 'to' in value:
+            raise Exception('Bad value')
+
+        f = 'f{}'.format(value.get('from')) if value.get('from') else None
+        t = 't{}'.format(value.get('to')) if value.get('to') else None
+        s = '{}-{}'.format(f, t) if f and t else '{}'.format(f or t)
+        return '{}_{}'.format(self.attr_key, s)
+
     def parse_query(self):
+        """
+        Parse numeric query string, string must have format: f100-t10000000 or f255 or t4534
+        where f - from, t - to range tokens
+        :return: Dict contain parsed string
+        """
         if not self.query:
             return None
 
         val_type = 'range' if '-' in self.query else 'single'
 
         if val_type == 'single':
-            return self.parse_val(self.query)
+            return self._get_val(self.query)
         else:
             vals = self.query.split('-')
             if not len(vals) == 2:
                 return None
 
-            _values = [self.parse_val(v) for v in vals]
+            _values = [self._get_val(v) for v in vals]
             if None in _values:
                 return None
 
@@ -290,7 +325,7 @@ class NumQuery(QueryBase):
 
             return value
 
-    def parse_val(self, val):
+    def _get_val(self, val):
         value = {}
         if 'f' not in val and 't' not in val:
             return None
@@ -307,19 +342,47 @@ class NumQuery(QueryBase):
             except ValueError:
                 return None
 
-#
-# class ChoiceQuery(QueryBase):
-#     def __init__(self, *args, **kwargs):
-#         super().__init__(*args, **kwargs)
-#
-#     def parse_query(self):
-#         if not self.query:
-#             raise Exception('bad query')
-#         t = self.get_query_type()
-#         return self.query
-#
-#     def get_query_type(self):
-#         # for x in self.attr.attr_choices:
-#         #     if query == x[0] or query == x[2]:
-#         #         return cls.__name__
-#         return False
+
+class ChoiceQuery(QueryBase):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def build_query(self, value):
+        """
+        Build query string from value, value must be format:
+        [1, 2, 3] or [4]
+        :param value: List
+        :return: Query string
+        """
+        if not isinstance(value, list):
+            raise Exception('Bad value')
+
+        if not len(value):
+            return None
+
+        return '{}_{}'.format(self.attr_key, ','.join([str(x) for x in value]))
+
+    def parse_query(self):
+        """
+        Parse numeric query string, string must have format: 1,2,3 or 4
+        :return: List of choices values
+        """
+        if not self.query:
+            return None
+
+        val_type = 'enum' if ',' in self.query else 'single'
+
+        choices_values = self.get_choices_values()
+
+        if val_type == 'single':
+            try:
+                if int(self.query) in choices_values:
+                    return int(self.query)
+            except Exception:
+                return None
+            return None
+        else:
+            vals = [int(x) for x in self.query.split(',')]
+            if len([x for x in vals if x not in choices_values]):
+                return None
+            return vals

@@ -98,7 +98,7 @@ class TestPathCase(TestCase):
         self.assertEqual(path.category, c2)
         self.assertEqual(path.item, item)
 
-    def test_check_query(self):
+    def test_parse_query(self):
         c = self.create_category(name="Недвижимость", is_active=True)
         c1 = self.create_category(name="Квартиры", parent=c, is_unique_in_path=True, is_active=True)
         c2 = self.create_category(name="Куплю", parent=c1, is_active=True,
@@ -108,24 +108,42 @@ class TestPathCase(TestCase):
         item = item_class.class_obj.objects.create(category=c2,  price=11,
                                                    building_type=1, room=2)
 
+        path = Path(path='kvartiry/kupliu/', query='pr_f100-t500.pr_t15', query_allow_multiple=True)
+        self.assertEqual(path.attrs[0]['query_value'][0], {'from': 100, 'to': 500})
+        self.assertEqual(path.attrs[0]['query_value'][1], {'to': 15})
 
-        # realpath: 'kvartiry/kupliu?a=pr_f100-t10000000'
-        path = Path(path='kvartiry/kupliu/', query='pr_f100-t10000000.pr_f5-t15', query_allow_multiple=True)
-        # path = Path(path='kvartiry/kupliu/', query='pr_f100-t10000000.pr_f5-t15', query_allow_multiple=False)
-        print()
-        # path.get_query_attrs(query='pr_f100-t10000000')
-        # print()
-        # path1 = Path(path='kvartiry/kupliu/kirpichnyi', query='rbt_1,2,3')
-        # print()
-        # path2 = Path(path='kvartiry/kupliu/', query='rbt_1-3')
-        # print()
-        # path3 = Path(path='kvartiry/kupliu/kirpichnyi', query='rbt_kirpichnyi')
-        # print()
-        # path4 = Path(path='kvartiry/kupliu/', query='rbt_custom')
-        # print()
-        # print()
+        path = Path(path='kvartiry/kupliu/kirpichnyi', query='rbt_22')
+        self.assertEqual(path.attrs[0]['path_value'], 'kirpichnyi')
+        self.assertEqual(path.attrs[0]['query_value'], [])
 
+        path = Path(path='kvartiry/kupliu/kirpichnyi', query='rbt_2')
+        self.assertEqual(path.attrs[0]['query_value'], [2])
 
+        path = Path(path='kvartiry/kupliu/kirpichnyi', query='rbt_1,2,3')
+        self.assertEqual(path.attrs[0]['query_value'], [[1,2,3]])
+        path = Path(path='kvartiry/kupliu/kirpichnyi', query='rbt_1,2,3,10')
+        self.assertEqual(path.attrs[0]['query_value'], [])
+        path = Path(path='kvartiry/kupliu/kirpichnyi', query='rbt_1-5')
+        self.assertEqual(path.attrs[0]['query_value'], [])
 
+    def test_build_query_from_value(self):
+        c = self.create_category(name="Недвижимость", is_active=True)
+        c1 = self.create_category(name="Квартиры", parent=c, is_unique_in_path=True, is_active=True)
+        c2 = self.create_category(name="Куплю", parent=c1, is_active=True,
+                                  item_class='catalog_module_realty.models.FlatBuy')
 
-        # path = Path(path='kvartiry/kupliu/'+item.slug)
+        item_class = CatalogItem.get_item_by_class(c2.item_class)
+        item = item_class.class_obj.objects.create(category=c2, price=11,
+                                                   building_type=1, room=2)
+
+        a = item_class.get_attr_by_key('pr').class_obj()
+
+        v = a.build_query({'from': 100, 'to': 567})
+        self.assertEqual(v, 'pr_f100-t567')
+
+        v = a.build_query({'from': 100})
+        self.assertEqual(v, 'pr_f100')
+
+        a = item_class.get_attr_by_key('rbt').class_obj()
+        v = a.build_query([1, 2, 3])
+        self.assertEqual(v, 'rbt_1,2,3')
