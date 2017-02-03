@@ -9,7 +9,7 @@ from djcat.register import CatalogItem
 
 
 class Path:
-    def __init__(self, path=None, query=None, query_allow_multiple=False, request=None):
+    def __init__(self, path=None, query=None, query_allow_multiple=False, post_dict=None):
         self.CategoryModel = apps.get_model(settings.DJCAT_CATEGORY_MODEL)
 
         self.category = None
@@ -27,8 +27,8 @@ class Path:
             self.query = query
             self.parse_query()
 
-        if request:
-            self.request = request
+        if post_dict:
+            self.post_dict = post_dict
             self.parse_post_request()
             self.build_url()
 
@@ -229,7 +229,7 @@ class Path:
 
     def parse_post_request(self):
         """
-        Parse request.POST parameters
+        Parse post_dict.POST parameters
         :return:
         """
         self.category = self.get_category_post()
@@ -242,20 +242,20 @@ class Path:
         :return: Category model instance
         """
         try:
-            category = self.request.POST.get('category', None)
+            category = self.post_dict.get('category', None)
             return self.CategoryModel.objects.get(pk=int(category)) if category else None
         except ObjectDoesNotExist:
             return None
 
     def get_attrs_post(self):
         """
-        Collect and validate category attributes from request.POST parameters
+        Collect and validate category attributes from post_dict.POST parameters
         :return: List of attribute class instances
         """
         item_class = CatalogItem.get_item_by_class(self.category.item_class)
         attrs = []
         for a in item_class.attrs:
-            v = self.request.POST.get(a.key, None)
+            v = self.post_dict.get(a.key, None)
             if v:
                 try:
                     attr = a.class_obj(value=v)
@@ -278,7 +278,7 @@ class Path:
             attr_keys.append(a.attr_key)
         if attr_q:
             url_dict['a'] = '.'.join(attr_q)
-        url_dict.update({x[0]: x[1] for x in self.request.POST.dict().items() if x[0] not in ['category']+attr_keys})
+        url_dict.update({x[0]: x[1] for x in self.post_dict.items() if x[0] not in ['category'] + attr_keys})
         if url_dict:
             url = url + '?' + urlencode(url_dict)
         self.url = url

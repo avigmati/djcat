@@ -21,7 +21,7 @@ class Catalog(View):
 
     def render_category(self, request, path):
         """
-        Render catalog category template with request.GET parameters in context
+        Render catalog category template with post_dict.GET parameters in context
         """
         non_path_query = {x[0]: x[1] for x in request.GET.dict().items() if not x[0] == 'a'}
 
@@ -39,9 +39,12 @@ class Catalog(View):
 
     def post(self, request, *args, **kwargs):
         """
-        Emulate catalog search form post. Parse request.POST parameters, build on it url and redirect to get() with url
+        Emulate catalog search form post. Parse post_dict.POST parameters, build on it url and redirect to get().
+        Remember attribute formats! You must prepare your POST values to appropriate attribute format in post_dict.
         """
-        path = Path(request=request)
+        post_dict = request.POST.dict()
+
+        path = Path(post_dict=post_dict)
         url = path.url
         if not url:
             url = settings.DJCAT_CATALOG_ROOT_URL
