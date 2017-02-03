@@ -12,7 +12,7 @@ settings = dict(
             "ENGINE": "django.db.backends.sqlite3",
         }
     },
-    ROOT_URLCONF="djcat.urls",
+    ROOT_URLCONF="tests.urls",
 
     INSTALLED_APPS=[
         "django.contrib.auth",
@@ -26,11 +26,27 @@ settings = dict(
     SITE_ID=1,
     MIDDLEWARE_CLASSES=(),
 
+    TEMPLATES=[
+        {
+            'BACKEND': 'django.template.backends.django.DjangoTemplates',
+            'APP_DIRS': True,
+            'OPTIONS': {
+                'context_processors': [
+                    'django.template.context_processors.debug',
+                    'django.template.context_processors.request',
+                    'django.contrib.auth.context_processors.auth',
+                    'django.contrib.messages.context_processors.messages',
+                ],
+            },
+        },
+    ],
+
     DJCAT_INIT_ATTR=False,
-    DJCAT_ATTR_TYPES=['simply', 'choice'],
+    DJCAT_ATTR_TYPES=['numeric', 'choice'],
     DJCAT_CATEGORY_MODEL='catalog.Category',
     DJCAT_ITEM_SLUG_DELIMETER='_',
-    DJCAT_ITEM_UID_LENGTH=8
+    DJCAT_ITEM_UID_LENGTH=8,
+    DJCAT_CATALOG_ROOT_URL='/'
 )
 
 def settings_for_migrate():

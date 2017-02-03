@@ -28,7 +28,7 @@ class BaseDjcat:
         return
 
     @abc.abstractmethod
-    def get_url(self):
+    def get_url(self, *args, **kwargs):
         """Return item url"""
         return
 
@@ -136,8 +136,10 @@ class DjcatCategory(MPTTModel, BaseDjcat):
     def __unicode__(self):
         return self.name
 
-    def get_url(self):
-        return 'url'
+    def get_url(self, *args, **kwargs):
+        paths = [v for k, v in self.get_url_paths().items() if len(v)]
+        shortest = min(paths, key=len)
+        return '/'.join(shortest) + '/'
 
     def get_url_paths(self):
         """

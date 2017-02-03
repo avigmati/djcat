@@ -37,10 +37,10 @@ class TestPathCase(TestCase):
                    'module': 'catalog_module_realty.models',
                    'verbose_name': 'Недвижимость'}}
         """
-        self.assertRaises(PathNotValid, Path, path=None)
-        self.assertRaises(PathNotValid, Path, path='')
-        self.assertRaises(PathNotValid, Path, path='/')
-        self.assertRaises(PathNotValid, Path, path='//')
+        self.assertEqual(Path(path=None).category, None)
+        self.assertEqual(Path(path='').category, None)
+        self.assertEqual(Path(path='/').category, None)
+        self.assertEqual(Path(path='//').category, None)
         self.assertRaises(PathNotFound, Path, path='/sdgsdgf/')
 
     def test_check_category_instance(self):

@@ -1,19 +1,10 @@
-from collections import namedtuple
+import json
 
 from django.apps import apps
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 
 from djcat.exceptions import *
-
-
-class BaseAttrQuery:
-    """
-    Base for attribute and query classes. Need for proper multiple inheritance.
-    http://stackoverflow.com/questions/8688114/python-multi-inheritance-init
-    """
-    def __init__(self, *args, **kwargs):
-        pass
 
 
 def catalog_attribute(name=None, key=None, verbose_name=None):
@@ -54,7 +45,7 @@ def djcat_attr():
     return decorate
 
 
-class BaseAttribute(BaseAttrQuery):
+class BaseAttribute:
     """
     Base item attribute class.
      Subclasses must define attributes:
@@ -70,7 +61,28 @@ class BaseAttribute(BaseAttrQuery):
     attr_type = None
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        self.value = kwargs.get('value', None)
+        if self.value:
+            self.validate_value()
+        self.query = kwargs.get('query', None)
+
+    def validate_value(self):
+        """Validate value, value must have format defined in subclass"""
+        raise NotImplementedError('validate_value() must implement in subclass.')
+
+    def parse_query(self):
+        """
+        Parse query string
+        :return: Parsed value
+        """
+        raise Exception('parse_query() must implement in subclasses')
+
+    def build_query(self, *args, **kwargs):
+        """
+        Build query string
+        :return: Parsed value
+        """
+        raise Exception('build_query() must implement in subclasses')
 
     @classmethod
     def check(cls):
@@ -124,11 +136,89 @@ class BaseAttribute(BaseAttrQuery):
                         raise ItemAttributeKeyDuplicate(a[1]['class'], cls, cls.attr_key)
 
 
-class SimplyAttribute(BaseAttribute):
-    attr_type = 'simply'
+class NumericAttribute(BaseAttribute):
+    attr_type = 'numeric'
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+    def validate_value(self):
+        """
+        Validate value, value format:
+        {'from': numeric value, 'to': numeric value} or {'from': numeric value} or {'to': numeric value}
+        """
+        if isinstance(self.value, str):
+            try:
+                self.value = json.loads(self.value)
+            except Exception:
+                raise Exception('Bad value')
+
+        if not isinstance(self.value, dict):
+            raise Exception('Bad value')
+        if not 'from' in self.value and not 'to' in self.value:
+            raise Exception('Bad value')
+
+    def build_query(self, value=None):
+        if not value:
+            value = self.value
+        f = 'f{}'.format(value.get('from')) if value.get('from') else None
+        t = 't{}'.format(value.get('to')) if value.get('to') else None
+        s = '{}-{}'.format(f, t) if f and t else '{}'.format(f or t)
+        return '{}_{}'.format(self.attr_key, s)
+
+    def parse_query(self):
+        """
+        Parse numeric query string, string must have format: f100-t10000000 or f255 or t4534
+        where f - from, t - to range tokens
+        :return: Dict contain parsed string
+        """
+        if not self.query:
+            return None
+
+        val_type = 'range' if '-' in self.query else 'single'
+
+        if val_type == 'single':
+            return self._get_val(self.query)
+        else:
+            vals = self.query.split('-')
+            if not len(vals) == 2:
+                return None
+
+            _values = [self._get_val(v) for v in vals]
+            if None in _values:
+                return None
+
+            _from, _to = None, None
+            for v in _values:
+                if 'from' in v:
+                    _from = v.get('from')
+                if 'to' in v:
+                    _to = v.get('to')
+            if _from > _to or _from == _to:
+                return None
+
+            value = {}
+            for v in _values:
+                value.update(v)
+
+            return value
+
+    def _get_val(self, val):
+        value = {}
+        if 'f' not in val and 't' not in val:
+            return None
+        if 'f' in val:
+            try:
+                value['from'] = int(val.replace('f', ''))
+                return value
+            except ValueError:
+                return None
+        else:
+            try:
+                value['to'] = int(val.replace('t', ''))
+                return value
+            except ValueError:
+                return None
 
 
 class ChoiceAttribute(BaseAttribute):
@@ -149,6 +239,58 @@ class ChoiceAttribute(BaseAttribute):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+    def validate_value(self):
+        """
+        Validate value, value format:
+        [1, 2, 3] or [4]
+        :param value: List
+        :return: Query string
+        """
+        if isinstance(self.value, str):
+            try:
+                self.value = json.loads(self.value)
+            except Exception:
+                raise Exception('Bad value')
+        if not isinstance(self.value, list):
+            raise Exception('Bad value')
+
+    def build_query(self, value=None):
+        if not value:
+            value = self.value
+
+        if not isinstance(value, list):
+            raise Exception('Bad value')
+
+        if not len(value):
+            return None
+
+        return '{}_{}'.format(self.attr_key, ','.join([str(x) for x in value]))
+
+    def parse_query(self):
+        """
+        Parse numeric query string, string must have format: "1,2,3" or "4"
+        :return: List of choices values
+        """
+        if not self.query:
+            return None
+
+        val_type = 'enum' if ',' in self.query else 'single'
+
+        choices_values = self.get_choices_values()
+
+        if val_type == 'single':
+            try:
+                if int(self.query) in choices_values:
+                    return int(self.query)
+            except Exception:
+                return None
+            return None
+        else:
+            vals = [int(x) for x in self.query.split(',')]
+            if len([x for x in vals if x not in choices_values]):
+                return None
+            return vals
 
     def get_choices_values(self):
         return [x[0] for x in self.__class__.attr_choices]
@@ -244,145 +386,3 @@ class ChoiceAttribute(BaseAttribute):
                         raise ItemAttributeChoicesSlugsDuplicateItemInstanceSlug(cls, item)
                     except ObjectDoesNotExist:
                         pass
-
-
-class QueryBase(BaseAttrQuery):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.query = kwargs.get('query')
-        self.value = kwargs.get('value')
-
-    def parse_query(self):
-        """
-        Parse query string
-        :return: Parsed value
-        """
-        raise Exception('parse_query() must implement in subclasses')
-
-    def build_query(self, value):
-        """
-        Build query string
-        :return: Parsed value
-        """
-        raise Exception('build_query() must implement in subclasses')
-
-
-class NumericQuery(QueryBase):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def build_query(self, value):
-        """
-        Build query string from value, value must have format:
-        {'from': numeric value, 'to': numeric value} or {'from': numeric value} or {'to': numeric value}
-        :param value: Dict
-        :return: Query string
-        """
-        if not isinstance(value, dict):
-            raise Exception('Bad value')
-        if not 'from' in value and not 'to' in value:
-            raise Exception('Bad value')
-
-        f = 'f{}'.format(value.get('from')) if value.get('from') else None
-        t = 't{}'.format(value.get('to')) if value.get('to') else None
-        s = '{}-{}'.format(f, t) if f and t else '{}'.format(f or t)
-        return '{}_{}'.format(self.attr_key, s)
-
-    def parse_query(self):
-        """
-        Parse numeric query string, string must have format: f100-t10000000 or f255 or t4534
-        where f - from, t - to range tokens
-        :return: Dict contain parsed string
-        """
-        if not self.query:
-            return None
-
-        val_type = 'range' if '-' in self.query else 'single'
-
-        if val_type == 'single':
-            return self._get_val(self.query)
-        else:
-            vals = self.query.split('-')
-            if not len(vals) == 2:
-                return None
-
-            _values = [self._get_val(v) for v in vals]
-            if None in _values:
-                return None
-
-            _from, _to = None, None
-            for v in _values:
-                if 'from' in v:
-                    _from = v.get('from')
-                if 'to' in v:
-                    _to = v.get('to')
-            if _from > _to or _from == _to:
-                return None
-
-            value = {}
-            for v in _values:
-                value.update(v)
-
-            return value
-
-    def _get_val(self, val):
-        value = {}
-        if 'f' not in val and 't' not in val:
-            return None
-        if 'f' in val:
-            try:
-                value['from'] = int(val.replace('f', ''))
-                return value
-            except ValueError:
-                return None
-        else:
-            try:
-                value['to'] = int(val.replace('t', ''))
-                return value
-            except ValueError:
-                return None
-
-
-class ChoiceQuery(QueryBase):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def build_query(self, value):
-        """
-        Build query string from value, value must be format:
-        [1, 2, 3] or [4]
-        :param value: List
-        :return: Query string
-        """
-        if not isinstance(value, list):
-            raise Exception('Bad value')
-
-        if not len(value):
-            return None
-
-        return '{}_{}'.format(self.attr_key, ','.join([str(x) for x in value]))
-
-    def parse_query(self):
-        """
-        Parse numeric query string, string must have format: 1,2,3 or 4
-        :return: List of choices values
-        """
-        if not self.query:
-            return None
-
-        val_type = 'enum' if ',' in self.query else 'single'
-
-        choices_values = self.get_choices_values()
-
-        if val_type == 'single':
-            try:
-                if int(self.query) in choices_values:
-                    return int(self.query)
-            except Exception:
-                return None
-            return None
-        else:
-            vals = [int(x) for x in self.query.split(',')]
-            if len([x for x in vals if x not in choices_values]):
-                return None
-            return vals

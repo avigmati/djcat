@@ -1,7 +1,8 @@
-from djcat.attrs import ChoiceAttribute, catalog_attribute, ChoiceQuery
+# from djcat.attrs import ChoiceAttribute, catalog_attribute, ChoiceQuery
+from djcat.attrs import ChoiceAttribute, catalog_attribute
 
 
-class BuildingTypeAttribute(ChoiceAttribute, ChoiceQuery):
+class BuildingTypeAttribute(ChoiceAttribute):
     attr_name = 'building_type'
     attr_verbose_name = 'Тип строения'
     attr_key = 'rbt'

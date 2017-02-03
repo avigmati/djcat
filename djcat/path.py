@@ -1,3 +1,5 @@
+from urllib.parse import urlencode
+
 from django.apps import apps
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
@@ -7,26 +9,33 @@ from djcat.register import CatalogItem
 
 
 class Path:
-    def __init__(self, path=None, query=None, query_allow_multiple=False):
-        self._CategoryModel = apps.get_model(settings.DJCAT_CATEGORY_MODEL)
+    def __init__(self, path=None, query=None, query_allow_multiple=False, request=None):
+        self.CategoryModel = apps.get_model(settings.DJCAT_CATEGORY_MODEL)
 
         self.category = None
         self.item = None
         self.attrs = []
         self.query_allow_multiple = query_allow_multiple
+        self.url = ''
 
-        self.path = path
-        self._path_list = []
-        self.resolve()
+        if path:
+            self.path = path
+            self._path_list = []
+            self.resolve()
 
         if query:
             self.query = query
             self.parse_query()
 
+        if request:
+            self.request = request
+            self.parse_post_request()
+            self.build_url()
+
     def get_item(self, slug, item_type='category', item_model=None):
         try:
             if item_type == 'category':
-                item = self._CategoryModel.objects.get(slug=slug)
+                item = self.CategoryModel.objects.get(slug=slug)
             else:
                 item = item_model.objects.get(slug=slug)
         except ObjectDoesNotExist:
@@ -128,9 +137,15 @@ class Path:
         Obtain elements of path: category, item. attributes
         :return:
         """
-        self._path_list = [p for p in self.path.split('/') if len(p)] if self.path else []
-        if not len(self._path_list):
-            raise PathNotValid(self.path)
+        if self.path:
+            self.path = str(self.path)
+            self._path_list = [p for p in self.path.split('/') if len(p)]
+            if not len(self._path_list):
+                self.category = None
+                return
+        else:
+            self.category = None
+            return
 
         if len(self._path_list) == 1:
             """
@@ -146,7 +161,7 @@ class Path:
                 self.get_item_instance(self._path_list[-2], self._path_list[-1])
             else:
                 try:
-                    branch = self._CategoryModel.objects.get(slug=self._path_list[0]).get_descendants(include_self=True)
+                    branch = self.CategoryModel.objects.get(slug=self._path_list[0]).get_descendants(include_self=True)
                 except ObjectDoesNotExist:
                     raise PathNotFound(self.path)
                 for node in branch:
@@ -194,6 +209,8 @@ class Path:
         :param query: String, query
         :return:
         """
+        self.query = self.query.replace('a=', '')
+
         attrs = self._get_query_attr_classes(self.query)
         for a in attrs:
             attr, query = a[0], a[1]
@@ -209,3 +226,59 @@ class Path:
                         self.attrs.append({'attribute': attr, 'query_value': [value]})
                 else:
                     self.attrs.append({'attribute': attr, 'query_value': [value]})
+
+    def parse_post_request(self):
+        """
+        Parse request.POST parameters
+        :return:
+        """
+        self.category = self.get_category_post()
+        if self.category:
+            self.attrs = self.get_attrs_post()
+
+    def get_category_post(self):
+        """
+        Get category instance
+        :return: Category model instance
+        """
+        try:
+            category = self.request.POST.get('category', None)
+            return self.CategoryModel.objects.get(pk=int(category)) if category else None
+        except ObjectDoesNotExist:
+            return None
+
+    def get_attrs_post(self):
+        """
+        Collect and validate category attributes from request.POST parameters
+        :return: List of attribute class instances
+        """
+        item_class = CatalogItem.get_item_by_class(self.category.item_class)
+        attrs = []
+        for a in item_class.attrs:
+            v = self.request.POST.get(a.key, None)
+            if v:
+                try:
+                    attr = a.class_obj(value=v)
+                except Exception:
+                    pass
+                else:
+                    attrs.append(attr)
+        return attrs
+
+    def build_url(self):
+        """
+        Build url from category, attributes and other POST parameters
+        """
+        url = self.category.get_url() if self.category else ''
+        url_dict = {}
+        attr_q = []
+        attr_keys = []
+        for a in self.attrs:
+            attr_q.append(a.build_query())
+            attr_keys.append(a.attr_key)
+        if attr_q:
+            url_dict['a'] = '.'.join(attr_q)
+        url_dict.update({x[0]: x[1] for x in self.request.POST.dict().items() if x[0] not in ['category']+attr_keys})
+        if url_dict:
+            url = url + '?' + urlencode(url_dict)
+        self.url = url
