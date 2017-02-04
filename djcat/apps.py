@@ -20,8 +20,8 @@ class DjcatConfig(AppConfig):
         if db_table_exists(category_table_name):
             CatalogItem.load_items_attributes()
             if settings.DJCAT_DEBUG_OUT == 'file':
+                print('Loaded with structure: {}'.format(settings.DJCAT_DEBUG_FILE))
                 with open(settings.DJCAT_DEBUG_FILE, 'w') as f:
-                    f.write('Loaded with structure:\n')
                     f.write(pprint.pformat(CatalogItem.REGISTRY))
             else:
                 print('Loaded with structure:')
