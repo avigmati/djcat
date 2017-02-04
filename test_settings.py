@@ -41,7 +41,9 @@ settings = dict(
         },
     ],
 
-    DJCAT_INIT_ATTR=False,
+    # DJCAT_INIT_ATTR=False,
+    DJCAT_DEBUG_OUT='file',
+    DJCAT_DEBUG_FILE=os.path.join(BASE_DIR, 'djcat_debug.txt'),
     DJCAT_ATTR_TYPES=['numeric', 'choice'],
     DJCAT_CATEGORY_MODEL='catalog.Category',
     DJCAT_ITEM_SLUG_DELIMETER='_',

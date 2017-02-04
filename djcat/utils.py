@@ -1,4 +1,4 @@
-import importlib
+from django.db import connection
 import random
 import string
 import itertools
@@ -54,3 +54,10 @@ def unique_slug(model, slug, instance=None, reserved_slugs=[]):
     return slug
 
 
+def db_table_exists(table_name):
+    """
+    Check table exist
+    :param table_name:
+    :return:
+    """
+    return table_name in connection.introspection.table_names()
