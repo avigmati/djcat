@@ -45,7 +45,7 @@ class Catalog(View):
         post_dict = request.POST.dict()
 
         path = Path(post_dict=post_dict)
-        url = path.url
+        url = path.url_full
         if not url:
             url = settings.DJCAT_CATALOG_ROOT_URL
         else:

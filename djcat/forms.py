@@ -39,9 +39,9 @@ class ItemClassField(forms.ChoiceField):
     def get_choices(self):
         choices = [('', '')]
         for module, mdict in CatalogItem.REGISTRY.items():
-            items = [(x[1]['class'], x[1]['name']) for x in mdict['items'].items()]
+            items = [(x[1]['class'], x[1]['verbose_name']) for x in mdict['items'].items()]
             items = sorted(items, key=lambda x: x[1])
-            choices.append((mdict['human_name'], tuple(items)))
+            choices.append((mdict['verbose_name'], tuple(items)))
         return sorted(choices, key=lambda x: x[0])
 
 

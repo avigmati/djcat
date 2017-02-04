@@ -16,7 +16,9 @@ class Path:
         self.item = None
         self.attrs = []
         self.query_allow_multiple = query_allow_multiple
-        self.url = ''
+        self.url_full = ''
+        self.url_path = ''
+        self.url_query = ''
 
         if path:
             self.path = path
@@ -269,16 +271,18 @@ class Path:
         """
         Build url from category, attributes and other POST parameters
         """
-        url = self.category.get_url() if self.category else ''
-        url_dict = {}
+        self.url_path = self.category.get_url() if self.category else ''
+
+        query_dict = {}
         attr_q = []
         attr_keys = []
         for a in self.attrs:
             attr_q.append(a.build_query())
             attr_keys.append(a.attr_key)
         if attr_q:
-            url_dict['a'] = '.'.join(attr_q)
-        url_dict.update({x[0]: x[1] for x in self.post_dict.items() if x[0] not in ['category'] + attr_keys})
-        if url_dict:
-            url = url + '?' + urlencode(url_dict)
-        self.url = url
+            query_dict['a'] = '.'.join(attr_q)
+        query_dict.update({x[0]: x[1] for x in self.post_dict.items() if x[0] not in ['category'] + attr_keys})
+        if query_dict:
+            self.url_query = '?' + urlencode(query_dict)
+
+        self.url_full = self.url_path + self.url_query

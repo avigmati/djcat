@@ -67,14 +67,6 @@ class TestViewCase(TestCase):
         response = self.client.post('/kvartiry/', {'category': 3}, follow=True)
         self.assertEqual(response.context.get('category'), 'Куплю')
 
-
-        # response = self.client.post('/kvartiry/', {'category': 3, 'pr_from': 1, 'pr_to': 50, 'rbt': [1, 2, 4],
-        #                                            'q': 'привет'}, follow=True)
-        # self.assertEqual(response.context.get('category'), 'Куплю')
-        # self.assertEqual(response.context.get('pr'), [{'to': 50, 'from': 1}])
-        # self.assertEqual(response.context.get('rbt'), [[1, 2, 4]])
-        # self.assertEqual(response.context.get('q'), 'привет')
-
         pr = json.dumps({'from': 1, 'to': 50})
         rbt = json.dumps([1, 2, 4])
         response = self.client.post('/kvartiry/', {'category': 3, 'pr': pr, 'rbt': rbt, 'q': 'привет'}, follow=True)
