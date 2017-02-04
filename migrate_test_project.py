@@ -18,8 +18,8 @@ except ImportError:
 
 try:
     setup = django.setup
-    from test_settings import settings_for_migrate
-    settings.configure(**settings_for_migrate())
+    from test_settings import settings as test_settings
+    settings.configure(**test_settings)
 except AttributeError:
     pass
 else:

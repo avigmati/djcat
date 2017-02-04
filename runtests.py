@@ -18,13 +18,13 @@ except ImportError:
 
 def setup_proj():
     try:
-        from test_settings import settings_for_test
+        from test_settings import settings as test_settings
         import django
         setup = django.setup
     except AttributeError:
         pass
     else:
-        settings.configure(**settings_for_test())
+        settings.configure(**test_settings)
         setup()
 
 

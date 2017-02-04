@@ -1,11 +1,11 @@
 from urllib.parse import urlencode
 
 from django.apps import apps
-from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 
-from djcat.exceptions import *
-from djcat.register import CatalogItem
+from . import settings
+from .exceptions import *
+from .register import CatalogItem
 
 
 class Path:
@@ -104,8 +104,8 @@ class Path:
     def get_item_instance(self, category_slug, item_slug):
         """
         Return True if slug in category attributes paths
-        :param slug: String slug
-        :param attr_paths: List of category attributes paths
+        :param category_slug: String slug
+        :param item_slug: String slug
         :return: Bool
         """
         self.category = self.get_item(category_slug)
@@ -208,7 +208,6 @@ class Path:
     def parse_query(self):
         """
         Parse query
-        :param query: String, query
         :return:
         """
         self.query = self.query.replace('a=', '')

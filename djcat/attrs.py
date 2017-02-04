@@ -1,9 +1,9 @@
 import json
 
 from django.apps import apps
-from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 
+from . import settings
 from djcat.exceptions import *
 
 
@@ -244,7 +244,6 @@ class ChoiceAttribute(BaseAttribute):
         """
         Validate value, value format:
         [1, 2, 3] or [4]
-        :param value: List
         :return: Query string
         """
         if isinstance(self.value, str):
@@ -337,7 +336,7 @@ class ChoiceAttribute(BaseAttribute):
         :return:
         """
         for s in slugs:
-            if settings.DJCAT_ITEM_SLUG_DELIMETER in s:
+            if settings.DJCAT_ITEM_SLUG_DELIMITER in s:
                 raise ItemAttributeChoicesSlugNotValid(cls)
 
         if not len(set(slugs)) == len(slugs):

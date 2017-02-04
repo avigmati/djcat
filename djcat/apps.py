@@ -1,8 +1,8 @@
 import pprint
 
 from django.apps import AppConfig
-from django.conf import settings
 
+from . import settings
 from .__init__ import __version__
 from .utils import db_table_exists
 from .register import CatalogItem

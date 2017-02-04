@@ -5,11 +5,11 @@ from django.db import models
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.utils.translation import ugettext as _
-from django.conf import settings
 
 from mptt.models import MPTTModel, TreeForeignKey
 
-from djcat.register import CatalogItem
+from . import settings
+from .register import CatalogItem
 from .utils import create_slug, unique_slug, create_uid
 from .exceptions import *
 
@@ -42,7 +42,7 @@ class BaseDjcat:
         :param name:
         :return:
         """
-        if settings.DJCAT_ITEM_SLUG_DELIMETER in name:
+        if settings.DJCAT_ITEM_SLUG_DELIMITER in name:
             raise ItemNameNotValid(item_name=name)
 
 
@@ -288,9 +288,9 @@ class DjcatItem(models.Model, BaseDjcat):
         if not self.id:
             self.uid = self.create_uid()
         # hehe shit happens
-        self.slug = create_slug(self.get_name_for_slug()) + settings.DJCAT_ITEM_SLUG_DELIMETER + self.uid
+        self.slug = create_slug(self.get_name_for_slug()) + settings.DJCAT_ITEM_SLUG_DELIMITER + self.uid
         while self.slug in self.get_reserved_slugs():
-            self.slug = create_slug(self.get_name_for_slug()) + settings.DJCAT_ITEM_SLUG_DELIMETER + self.uid
+            self.slug = create_slug(self.get_name_for_slug()) + settings.DJCAT_ITEM_SLUG_DELIMITER + self.uid
 
 
 

@@ -1,5 +1,6 @@
 from django.utils.translation import ugettext as _
-from django.conf import settings
+
+from . import settings
 
 
 class CategoryInheritanceError(Exception):
@@ -224,10 +225,10 @@ class ItemAttributeChoicesSlugNotValid(Exception):
         self.error = "Attribute class '{}' choices slugs should not contain '{}'."
 
     def __repr__(self):
-        return self.error.format(self.attr_class, settings.DJCAT_ITEM_SLUG_DELIMETER)
+        return self.error.format(self.attr_class, settings.DJCAT_ITEM_SLUG_DELIMITER)
 
     def __str__(self):
-        return self.error.format(self.attr_class, settings.DJCAT_ITEM_SLUG_DELIMETER)
+        return self.error.format(self.attr_class, settings.DJCAT_ITEM_SLUG_DELIMITER)
 
 
 class ItemNameNotValid(Exception):
@@ -236,7 +237,7 @@ class ItemNameNotValid(Exception):
         self.error = "Item name '{}' should not contain '{}'."
 
     def __repr__(self):
-        return self.error.format(self.item_name, settings.DJCAT_ITEM_SLUG_DELIMETER)
+        return self.error.format(self.item_name, settings.DJCAT_ITEM_SLUG_DELIMITER)
 
     def __str__(self):
-        return _(self.error).format(self.item_name, settings.DJCAT_ITEM_SLUG_DELIMETER)
+        return _(self.error).format(self.item_name, settings.DJCAT_ITEM_SLUG_DELIMITER)

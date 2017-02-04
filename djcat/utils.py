@@ -1,11 +1,13 @@
-from django.db import connection
 import random
 import string
 import itertools
+
 from unidecode import unidecode
 
-from django.conf import settings
+from django.db import connection
 from django.utils.text import slugify
+
+from . import settings
 
 
 def create_slug(val):
