@@ -100,6 +100,12 @@ class TestCategoryCase(TestCase):
         c = self.create_instance(name='root')
         self.assertRaises(CategoryRootCheckError, self.create_instance, name='root')
 
+    def test_slugs_uniques(self):
+        c = self.create_instance(name='root')
+        c2 = self.create_instance(name='root', parent=c)
+        self.assertEqual(c.slug, 'root')
+        self.assertEqual(c2.slug, 'root-1')
+
     def test_move_to_root(self):
         c = self.create_instance(name='root')
         c1 = self.create_instance(name="root", parent=c)
