@@ -36,6 +36,7 @@ class ItemClassField(forms.ChoiceField):
         self.instance = kwargs.pop('instance')
 
         super().__init__(choices=self.get_choices(), *args, **kwargs)
+
         if self.instance:
             self.widget.classes_in_use = [x.item_class for x in self.model.objects.exclude(pk=self.instance.pk)
                                           if not x.item_class == '']
