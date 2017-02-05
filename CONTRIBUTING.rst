@@ -109,4 +109,4 @@ Tips
 
 To run a subset of tests::
 
-    $ ./runtests.py test_path.TestPathCase
+    $ python runtests.py test_path.TestPathCase
