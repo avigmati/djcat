@@ -81,16 +81,16 @@ class TestCategoryCase(TestCase):
                          {'full': ['test', 'test1', 'test2', 'test3'], 'unique': ['test1', 'test3']})
 
         # create new root and move c1 to this branch
-        cn = self.create_instance(name="test-new")
+        cn = self.create_instance(name="test new")
         c1.parent = cn
         c1.save()
         c1.refresh_from_db()
         c2.refresh_from_db()
         c3.refresh_from_db()
-        self.assertEqual(c1.get_url_paths(), {'full': ['test-new', 'test1'], 'unique': ['test1']})
-        self.assertEqual(c2.get_url_paths(), {'full': ['test-new', 'test1', 'test2'], 'unique': ['test1']})
+        self.assertEqual(c1.get_url_paths(), {'full': ['testnew', 'test1'], 'unique': ['test1']})
+        self.assertEqual(c2.get_url_paths(), {'full': ['testnew', 'test1', 'test2'], 'unique': ['test1']})
         self.assertEqual(c3.get_url_paths(),
-                         {'full': ['test-new', 'test1', 'test2', 'test3'], 'unique': ['test1', 'test3']})
+                         {'full': ['testnew', 'test1', 'test2', 'test3'], 'unique': ['test1', 'test3']})
 
     def test_endpoint_as_parent(self):
         c = self.create_instance(name='endpoint', item_class='itemc')
@@ -101,10 +101,10 @@ class TestCategoryCase(TestCase):
         self.assertRaises(CategoryRootCheckError, self.create_instance, name='root')
 
     def test_slugs_uniques(self):
-        c = self.create_instance(name='root')
-        c2 = self.create_instance(name='root', parent=c)
-        self.assertEqual(c.slug, 'root')
-        self.assertEqual(c2.slug, 'root-1')
+        c = self.create_instance(name='test cat')
+        c2 = self.create_instance(name='test cat', parent=c)
+        self.assertEqual(c.slug, 'testcat')
+        self.assertEqual(c2.slug, 'testcat-1')
 
     def test_move_to_root(self):
         c = self.create_instance(name='root')

@@ -16,7 +16,10 @@ def create_slug(val):
     :param val: String
     :return: String
     """
-    return slugify(unidecode(val))
+    slug = slugify(unidecode(val))
+    for s in settings.DJCAT_SLUG_RESERVED:
+        slug = slug.replace(s, '')
+    return slug
 
 
 def create_uid(model, size):
@@ -28,8 +31,8 @@ def create_uid(model, size):
 
 
 def split_slug_on_appendix(slug):
-    if len(slug[::-1].split('-')) > 1:
-        appendix, slug = slug[::-1].split('-')
+    if len(slug[::-1].split(settings.DJCAT_SLUG_UNIQNUMBER_DELIMITER)) > 1:
+        appendix, slug = slug[::-1].split(settings.DJCAT_SLUG_UNIQNUMBER_DELIMITER)
         slug = slug[::-1]
     else:
         appendix = None
@@ -52,7 +55,7 @@ def unique_slug(model, slug, instance=None, reserved_slugs=[]):
         else:
             if not model.objects.filter(slug=slug).exists() and slug not in reserved_slugs:
                 break
-        slug = '%s-%d' % (orig, x)
+        slug = '{}{}{}'.format(orig, settings.DJCAT_SLUG_UNIQNUMBER_DELIMITER, x)
     return slug
 
 
