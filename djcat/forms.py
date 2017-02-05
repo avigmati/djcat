@@ -33,8 +33,15 @@ class ItemClassField(forms.ChoiceField):
 
     def __init__(self, choices=(), *args, **kwargs):
         self.model = kwargs.pop('model')
+        self.instance = kwargs.pop('instance')
+
         super().__init__(choices=self.get_choices(), *args, **kwargs)
-        self.widget.classes_in_use = [x.item_class for x in self.model.objects.filter(is_active=True)]
+        if self.instance:
+            self.widget.classes_in_use = [x.item_class for x in self.model.objects.exclude(pk=self.instance.pk)
+                                          if not x.item_class == '']
+        else:
+            self.widget.classes_in_use = [x.item_class for x in self.model.objects.all()
+                                          if not x.item_class == '']
 
     def get_choices(self):
         choices = [('', '')]
@@ -49,7 +56,7 @@ class CategoryForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(CategoryForm, self).__init__(*args, **kwargs)
         self.fields['parent'].queryset = self.Meta.model.objects.filter(is_endpoint=False)
-        self.fields['item_class'] = ItemClassField(required=False, model=self.Meta.model)
+        self.fields['item_class'] = ItemClassField(required=False, model=self.Meta.model, instance=self.instance)
 
     class Meta:
         exclude = ['is_root', 'is_endpoint']
