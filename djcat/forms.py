@@ -4,8 +4,8 @@ from django.utils.encoding import force_text
 from django.utils.html import conditional_escape
 from django.utils.translation import ugettext as _
 
-from djcat.models import CatalogItem
-from djcat.exceptions import CategoryRootCheckError
+from .models import CatalogItem
+from .exceptions import *
 
 
 class ItemClassWidget(forms.Select):

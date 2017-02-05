@@ -27,6 +27,7 @@ class TestCategoryCase(TestCase):
 
     def test_creation(self):
         """Categories creation test"""
+
         c = self.create_instance(name="cat", slug="cat", is_active=True)
         self.assertTrue(isinstance(c, self.CategoryModel))
         self.assertEqual(c.__str__(), c.name)
@@ -39,6 +40,7 @@ class TestCategoryCase(TestCase):
 
     def test_child_creation(self):
         """Categories creation child test"""
+
         c_root = self.create_instance(name="root", slug="root", parent=None)
         c_child = self.create_instance(name="child", slug="child", parent=c_root)
         self.assertEqual(c_root.is_root, True)
@@ -46,6 +48,7 @@ class TestCategoryCase(TestCase):
 
     def test_child_active_update(self):
         """Categories update children test"""
+
         c_root = self.create_instance(name="root", slug="root", parent=None, is_active=True)
         c_child = self.create_instance(name="child", slug="child", parent=c_root, is_active=True)
         c_root.is_active = False
@@ -55,18 +58,19 @@ class TestCategoryCase(TestCase):
 
     def test_slug_creation(self):
         """Categories slug creation test"""
-        c = self.create_instance(name="привет")
-        self.assertEqual(c.slug, 'privet')
-        c2 = self.create_instance(name="привет2")
-        self.assertNotEqual(c.slug, c2.slug)
+
+        c = self.create_instance(name="hello")
+        self.assertEqual(c.slug, 'hello')
 
     def test_is_unique_in_path(self):
         """Categories unique in path test"""
+
         c = self.create_instance(name="test", is_unique_in_path=False, item_class='test_item_class')
         self.assertEqual(c.is_unique_in_path, True)
 
     def test_paths(self):
         """Categories paths creation and update test"""
+
         c = self.create_instance(name="test")
         self.assertEqual(c.get_url_paths(), {'full': ['test'], 'unique': []})
         c1 = self.create_instance(name="test1", parent=c, is_unique_in_path=True)
@@ -103,9 +107,9 @@ class TestCategoryCase(TestCase):
         self.assertRaises(CategoryRootCheckError, c1.save)
 
     def test_slug_clashes_with_attrs_slugs(self):
-        self.assertEqual(self.create_instance(name='Кирпичный', slug='kirpichnyu',
+        self.assertEqual(self.create_instance(name='Brick', slug='brick',
                                               item_class='catalog_module_realty.models.FlatBuy').slug,
-                         'kirpichnyi-1')
+                         'brick-1')
 
 
 class TestItemCase(TestCase):
@@ -117,22 +121,12 @@ class TestItemCase(TestCase):
         return c
 
     def test_item_create(self):
-        c = self.create_category(name="Недвижимость", is_active=True)
-        c1 = self.create_category(name="Квартиры", parent=c, is_unique_in_path=True, is_active=True)
-        c2 = self.create_category(name="Куплю", parent=c1, is_active=True,
+        c = self.create_category(name="Realty", is_active=True)
+        c1 = self.create_category(name="Flat", parent=c, is_unique_in_path=True, is_active=True)
+        c2 = self.create_category(name="Flatbuy", parent=c1, is_active=True,
                                   item_class='catalog_module_realty.models.FlatBuy')
         item_class = CatalogItem.get_item_by_class(c2.item_class)
         item = item_class.class_obj.objects.create(category=c2,  price=11,
                                                    building_type=1, room=2)
         self.assertTrue(isinstance(item, item_class.class_obj))
 
-# class TestDjcat(TestCase):
-#
-#     def setUp(self):
-#         pass
-#
-#     def test_something(self):
-#         pass
-#
-#     def tearDown(self):
-#         pass

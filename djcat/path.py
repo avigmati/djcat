@@ -23,7 +23,10 @@ class Path:
         if path:
             self.path = path
             self._path_list = []
-            self.resolve()
+            try:
+                self.resolve()
+            except PathNotFound:
+                self.category = None
 
         if query:
             self.query = query
