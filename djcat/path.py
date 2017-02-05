@@ -9,9 +9,8 @@ from .register import CatalogItem
 
 
 class Path:
-    def __init__(self, path=None, query=None, query_allow_multiple=False, post_dict=None):
+    def __init__(self, path='', query='', query_allow_multiple=False, post_dict=None):
         self.CategoryModel = apps.get_model(settings.DJCAT_CATEGORY_MODEL)
-
         self.category = None
         self.item = None
         self.attrs = []
@@ -20,20 +19,20 @@ class Path:
         self.url_path = ''
         self.url_query = ''
 
-        if path:
-            self.path = path
-            self._path_list = []
+        self.path = str(path)
+        self._path_list = []
+        if len(self.path):
             try:
                 self.resolve()
             except PathNotFound:
                 self.category = None
 
-        if query:
-            self.query = query
+        self.query = str(query)
+        if len(self.query) and self.category:
             self.parse_query()
 
-        if post_dict:
-            self.post_dict = post_dict
+        self.post_dict = post_dict
+        if self.post_dict:
             self.parse_post_request()
             self.build_url()
 
@@ -142,13 +141,8 @@ class Path:
         Obtain elements of path: category, item. attributes
         :return:
         """
-        if self.path:
-            self.path = str(self.path)
-            self._path_list = [p for p in self.path.split('/') if len(p)]
-            if not len(self._path_list):
-                self.category = None
-                return
-        else:
+        self._path_list = [p for p in self.path.split('/') if len(p)]
+        if not len(self._path_list):
             self.category = None
             return
 
