@@ -40,6 +40,7 @@ class CatalogItem:
     """
 
     REGISTRY = {}
+    ATTRS = {}
 
     def __init__(self, name):
         self.verbose_name = name
@@ -87,19 +88,22 @@ class CatalogItem:
                 try:
                     name = module.ITEM_MODULE_NAME
                 except AttributeError:
-                    raise ItemModuleNameNotDefined(cls, module)
+                    raise BadModule("Module '{}' of item class '{}' is not define ITEM_MODULE_NAME."
+                                    .format(module, cls))
                 else:
                     verbose_name = getattr(module, 'ITEM_MODULE_VERBOSE_NAME', name)
             else:
-                raise ItemModuleNameNotDefined(cls, mnames[0])
+                raise BadModule("Module '{}' of item class '{}' is not define ITEM_MODULE_NAME.".format(module, cls))
 
         # check duplicates
         for mname, mprops in self.__class__.REGISTRY.items():
             if not cls.__module__ == mprops['module']:
                 if mname == name:
-                    raise ItemModuleNameDuplicate(cls.__module__, name, mprops['module'])
+                    raise BadModule("Name '{}' of module '{}' already defined in module '{}'."
+                                    .format(name, cls.__module__, mprops['module']))
                 if mprops['verbose_name'] == verbose_name:
-                    raise ItemModuleNameDuplicate(cls.__module__, verbose_name, mprops['module'])
+                    raise BadModule("Verbose name '{}' of module '{}' already defined in module '{}'."
+                                    .format(name, cls.__module__, mprops['module']))
 
         return name, verbose_name, module
 
@@ -121,9 +125,10 @@ class CatalogItem:
         :param cls: Class object
         :return: Dictionary
         """
-        # check duplicates
+        # check duplicate verbose name
         if self.verbose_name in [x[1]['verbose_name'] for x in module['items'].items()]:
-            raise ItemNameDuplicate(self.verbose_name, module['module'])
+            raise BadItem("Item class verbose name '{}' duplicate in module '{}'."
+                          .format(self.verbose_name, module['module']))
         return {'verbose_name': self.verbose_name, 'class_name': cls.__name__,
                 'class': '{}.{}'.format(module['module'], cls.__name__), '_class': cls, 'attrs': {}}
 
@@ -136,11 +141,10 @@ class CatalogItem:
         for m in cls.REGISTRY.items():
             for i in m[1]['items'].items():
                 for f in i[1]['_class']._meta.fields:
-                    if getattr(f, '_is_djcat_attr', False):
-                        attr = f._attr_class
-                        attr.check()
+                    attr = getattr(f, '_attr_class', None)
+                    if attr:
                         i[1]['attrs'].update({
-                            attr.attr_name: attr.values_for_registry(cls.REGISTRY)
+                            attr.attr_name: attr.values_for_registry(cls.REGISTRY, i[1])
                         })
 
     @classmethod

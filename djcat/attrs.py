@@ -4,48 +4,52 @@ from django.apps import apps
 from django.core.exceptions import ObjectDoesNotExist
 
 from . import settings
-from djcat.exceptions import *
+from .exceptions import *
+from .register import CatalogItem
 
 
-def catalog_attribute(name=None, key=None, verbose_name=None):
-    """
-    Decorator for define attribute class, Example:
-     from djcat.attrs import BaseAttribute, catalog_attribute
+class AttributeRegistry(type):
 
-        @catalog_attribute(name='Area', verbose_name='Area', key='ar')
-        class AreaAttribute(SimplyAttribute):
-            pass
+    def __init__(cls, name, bases, clsdict):
+        if len(cls.mro()) > 2:
+            if cls.is_attr():
+                if not cls.is_field():
+                    cls.check_attr()
+                    CatalogItem.ATTRS.update({cls.attr_key: cls})
+                else:
+                    cls.mark_filed_as_attr()
+        super(AttributeRegistry, cls).__init__(name, bases, clsdict)
 
-    :param name: String, attribute name
-    :param key: String, unique attribute key
-    :param verbose_name: String, attribute verbose name
-    :return: Class
-    """
-    def decorate(cls):
-        if key:
-            setattr(cls, 'attr_key', key)
-        if name:
-            setattr(cls, 'attr_name', name)
-        if verbose_name:
-            setattr(cls, 'attr_verbose_name', verbose_name if verbose_name else name)
-        return cls
-    return decorate
+    def is_attr(cls, klass=None):
+        obj = klass if klass else cls
+        key = getattr(obj, 'attr_key', None)
+        name = getattr(obj, 'attr_name', None)
+        type = getattr(obj, 'attr_type', None)
+        verb_name = getattr(obj, 'attr_verbose_name', None)
+        return key and name and type and verb_name
 
-
-def djcat_attr():
-    """
-    Decorator for set attribute class (_attr_class) variable in model field class
-    :return: Class
-    """
-    def decorate(cls):
+    def is_field(cls):
         for b in cls.__bases__:
-            if getattr(b, '_is_djcat_attr', None) and getattr(b, 'attr_key', None):
+            if b.__module__.startswith('django.db.models'):
+                return True
+        return False
+
+    def check_attr(cls):
+        # check key duplicates
+        if CatalogItem.ATTRS.get(cls.attr_key):
+            raise BadAttribute("Attribute key '{}' duplicate in classes: '{}', '{}'."
+                               .format(cls.attr_key, cls, CatalogItem.ATTRS.get(cls.attr_key)))
+        # self.check
+        cls.check()
+
+    def mark_filed_as_attr(cls):
+        for b in cls.__bases__:
+            if cls.is_attr(klass=b):
                 setattr(cls, '_attr_class', b)
-        return cls
-    return decorate
+                return
 
 
-class BaseAttribute:
+class BaseAttribute(metaclass=AttributeRegistry):
     """
     Base item attribute class.
      Subclasses must define attributes:
@@ -54,7 +58,6 @@ class BaseAttribute:
      attr_name - attribute name
      attr_verbose_name = attribute verbose name, it shows user
     """
-    _is_djcat_attr = True
     attr_key = None
     attr_name = None
     attr_verbose_name = None
@@ -86,14 +89,10 @@ class BaseAttribute:
 
     @classmethod
     def check(cls):
-        if cls.attr_type not in settings.DJCAT_ATTR_TYPES:
-            raise ItemAttributeUnknownType(cls, cls.attr_type)
-        if not cls.attr_key:
-            raise ItemAttributeKeyNotPresent(cls)
-        if not cls.attr_name:
-            raise ItemAttributeNameNotPresent(cls)
-        if not cls.attr_verbose_name:
-            raise ItemAttributeVerboseNameNotPresent(cls)
+        """
+        Perform class attributes check
+        """
+        NotImplementedError('check() must implement in subclass.')
 
     @classmethod
     def get_class(cls):
@@ -104,13 +103,12 @@ class BaseAttribute:
         return '{}.{}'.format(cls.__module__, cls.__name__)
 
     @classmethod
-    def values_for_registry(cls, registry):
+    def values_for_registry(cls, registry, registry_item):
         """
         Return attribute values dictionary for write to CatalogItem.REGISTRY
         :param registry: CatalogItem.REGISTRY
         :return: Dictionary
         """
-        cls.validate(registry)
         return {
             'type': cls.attr_type,
             'verbose_name': cls.attr_verbose_name,
@@ -119,25 +117,13 @@ class BaseAttribute:
             '_class': cls
         }
 
-    @classmethod
-    def validate(cls, registry):
-        cls.check_attr_key(registry)
-
-    @classmethod
-    def check_attr_key(cls, registry):
-        """
-        Check attribute key for duplicates in registry
-        :return:
-        """
-        for m in registry.items():
-            for i in m[1]['items'].items():
-                for a in i[1]['attrs'].items():
-                    if a[1]['key'] == cls.attr_key:
-                        raise ItemAttributeKeyDuplicate(a[1]['class'], cls, cls.attr_key)
-
 
 class NumericAttribute(BaseAttribute):
     attr_type = 'numeric'
+
+    @classmethod
+    def check(cls):
+        pass
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -296,9 +282,22 @@ class ChoiceAttribute(BaseAttribute):
 
     @classmethod
     def check(cls):
-        super(ChoiceAttribute, cls).check()
         if not type(cls.attr_choices) == tuple:
-            raise Exception('attr_choices must be tuple type')
+            raise BadAttribute("Attribute '{}' must be tuple.".format(cls))
+        cls.check_cls_choices_slugs()
+
+    @classmethod
+    def check_cls_choices_slugs(cls):
+        """
+        Check for slug duplicates in attribute class choices
+        """
+        slugs = [c[-1] for c in cls.attr_choices]
+        for s in slugs:
+            if settings.DJCAT_ITEM_SLUG_DELIMITER in s:
+                raise BadAttribute("Attribute class '{}' choices slugs should not contain '{}'."
+                                   .format(cls, settings.DJCAT_ITEM_SLUG_DELIMITER))
+        if not len(set(slugs)) == len(slugs):
+            raise BadAttribute("Attribute class '{}' duplicate choices slugs.".format(cls))
 
     @classmethod
     def get_choices_for_model_field(cls):
@@ -309,79 +308,62 @@ class ChoiceAttribute(BaseAttribute):
         return [c[0:2] for c in cls.attr_choices]
 
     @classmethod
-    def choices_slugs_for_registry(cls, registry):
+    def values_for_registry(cls, registry, registry_item):
+        values = super(ChoiceAttribute, cls).values_for_registry(registry, registry_item)
+        slugs = cls.choices_slugs_for_registry(registry, registry_item)
+        values.update({'choices': slugs})
+        return values
+
+    @classmethod
+    def choices_slugs_for_registry(cls, registry, registry_item):
         """
         Return choices slugs
         :return: List
         """
         slugs = [c[-1] for c in cls.attr_choices]
-        cls.check_cls_choices_slugs(slugs)
-        cls.check_catalog_item_choices_slugs(slugs, registry)
+        cls.check_item_choices_slugs(slugs, registry_item)
         cls.check_categories_slugs(slugs)
-        cls.check_items_slugs(slugs, registry)
+        cls.check_item_instances_slugs(slugs, registry)
         return slugs
 
     @classmethod
-    def values_for_registry(cls, registry):
-        values = super(ChoiceAttribute, cls).values_for_registry(registry)
-        slugs = cls.choices_slugs_for_registry(registry)
-        values.update({'choices': slugs})
-        return values
-
-    @classmethod
-    def check_cls_choices_slugs(cls, slugs):
+    def check_item_choices_slugs(cls, slugs, registry_item):
         """
-        Check for slug duplicates in attribute class choices
+        Check for slug clashes in catalog item class all attributes choices
         :param slugs: List - slugs
-        :return:
+        :param registry_item Registry Item class dict
         """
-        for s in slugs:
-            if settings.DJCAT_ITEM_SLUG_DELIMITER in s:
-                raise ItemAttributeChoicesSlugNotValid(cls)
-
-        if not len(set(slugs)) == len(slugs):
-            raise ItemAttributeChoicesSlugsDuplicate(cls)
-
-    @classmethod
-    def check_catalog_item_choices_slugs(cls, slugs, registry):
-        """
-        Check for slug clashes in catalog item class all choices
-        :param slugs: List - slugs
-        :param registry: Dictionary - CatalogItem.REGISTRY
-        :return:
-        """
-        for m in registry.items():
-            for i in m[1]['items'].items():
-                for a in [a for a in i[1]['attrs'].items() if a[1]['type'] == 'choice']:
-                    choices = a[1].get('choices')
-                    if len(set(slugs) & set(choices)):
-                        raise ItemAttributeChoicesSlugsDuplicateInCatalogItem(cls, a[1].get('_class'))
+        for a in [a for a in registry_item['attrs'].items() if a[1]['type'] == 'choice']:
+            choices = a[1].get('choices')
+            if len(set(slugs) & set(choices)):
+                raise BadAttribute("Attribute class '{}' have choices that clashes with choices in same "
+                                   "Item attribute class '{}'.".format(cls, a[1].get('_class')))
 
     @classmethod
     def check_categories_slugs(cls, slugs):
         """
         Check for slug clashes with categories slugs
         :param slugs: List - slugs
-        :return:
         """
         CategoryModel = apps.get_model(settings.DJCAT_CATEGORY_MODEL)
         for node in CategoryModel.objects.all():
             if node.slug in slugs:
-                raise ItemAttributeChoicesSlugsDuplicateWithcCategory(cls, node)
+                raise BadAttribute("Attribute class '{}' have choices that clashes with category instance slug, "
+                                   "category instance: '{}'.".format(cls, node))
 
     @classmethod
-    def check_items_slugs(cls, slugs, registry):
+    def check_item_instances_slugs(cls, slugs, registry):
         """
         Check for slug clashes with all item instances slugs
         :param slugs: List - slugs
         :param registry: Dictionary - CatalogItem.REGISTRY
-        :return:
         """
         for m in registry.items():
             for i in m[1]['items'].items():
                 for slug in slugs:
                     try:
                         item = i[1]['_class'].objects.get(slug=slug)
-                        raise ItemAttributeChoicesSlugsDuplicateItemInstanceSlug(cls, item)
+                        raise BadAttribute("Attribute class '{}' have choices that clashes with item instance slug, "
+                                           "item.pk: '{}'.".format(cls, item.pk))
                     except ObjectDoesNotExist:
                         pass

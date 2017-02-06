@@ -1,5 +1,4 @@
-# from djcat.attrs import ChoiceAttribute, catalog_attribute, ChoiceQuery
-from djcat.attrs import ChoiceAttribute, catalog_attribute
+from djcat.attrs import ChoiceAttribute
 
 
 class BuildingTypeAttribute(ChoiceAttribute):
@@ -8,7 +7,7 @@ class BuildingTypeAttribute(ChoiceAttribute):
     attr_key = 'rbt'
     attr_choices = (
         (1, 'Brick', 'brick'),
-        (2, 'Панельный', 'panel'),
+        (2, 'Panel', 'panel'),
         (3, 'Block', 'block'),
         (4, 'Monolith', 'monolith'),
         (5, 'Wood', 'wood'),
